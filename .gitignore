@@ -1,0 +1,28 @@
+# Build output
+.build/
+dist/
+*.o
+*.d
+*.dia
+*.swiftdeps
+*.swiftmodule
+*.swiftsourceinfo
+*.dSYM/
+Package.resolved
+
+# Local scratch / not part of the release
+testbed/
+Tests/
+docs/
+.vscode/
+.idea/
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+.swiftpm/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
