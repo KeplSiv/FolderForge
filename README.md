@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🗂️ FolderForge
+<img src="screenshots/logo.png" width="72" height="72" alt="FolderForge logo">
+
+# FolderForge
 
 **A macOS folder icon designer.**
 Pick a color, drop on a symbol, emoji or your own image, and write it straight to your
