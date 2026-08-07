@@ -12,6 +12,8 @@ folders — with a one-click path back to the originals.
 ![Dependencies](https://img.shields.io/badge/dependencies-none-success?style=flat-square)
 ![GUI + CLI](https://img.shields.io/badge/GUI%20%2B%20CLI-one%20binary-5E5CE6?style=flat-square)
 
+[![Download DMG](https://img.shields.io/badge/Download-FolderForge.dmg-blue?style=flat-square&logo=apple)](https://github.com/KeplSiv/FolderForge/releases/latest/download/FolderForge.dmg)
+
 ![folders](screenshots/hero.png)
 
 </div>
