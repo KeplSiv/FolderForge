@@ -126,8 +126,31 @@ private struct IconTab: View {
     @Bindable var state: AppState
     @State private var imageDropTargeted = false
     @State private var showingFullSymbolPicker = false
+    @State private var dragStartOffset: CGPoint?
 
     private var style: Binding<FolderStyle> { $state.style }
+
+    private enum ImagePlacementMode: String, CaseIterable, Identifiable {
+        case fit, fill
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .fit: "Fit"
+            case .fill: "Fill"
+            }
+        }
+    }
+
+    private var imagePlacementMode: Binding<ImagePlacementMode> {
+        Binding {
+            state.style.overlayScale < 0.95 ? .fit : .fill
+        } set: { mode in
+            switch mode {
+            case .fit: setImagePlacement(scale: 0.72)
+            case .fill: setImagePlacement(scale: 1.0)
+            }
+        }
+    }
 
     var body: some View {
         SectionLabel(text: "Overlay", symbol: "star")
@@ -219,44 +242,60 @@ private struct IconTab: View {
         if state.style.overlay.kind != .none && state.style.overlay.kind != .icns {
             Divider()
 
-            SectionLabel(text: "Finish", symbol: "paintbrush")
-            Picker("", selection: style.finish) {
-                ForEach(OverlayFinish.allCases) { finish in
-                    Text(finish.title).tag(finish)
+            if state.style.overlay.kind != .image {
+                SectionLabel(text: "Finish", symbol: "paintbrush")
+                Picker("", selection: style.finish) {
+                    ForEach(OverlayFinish.allCases) { finish in
+                        Text(finish.title).tag(finish)
+                    }
                 }
-            }
-            .labelsHidden()
-            Text(state.style.finish.help)
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
+                .labelsHidden()
+                Text(state.style.finish.help)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            if state.style.finish.isMasked {
-                TintWell(color: style.overlayColor, label: "Ink")
-                HStack(spacing: 6) {
-                    Button("White") { state.style.overlayColor = .white }
-                    Button("Black") { state.style.overlayColor = .black }
-                    Button("Folder Tint") { state.style.overlayColor = state.style.tint }
+                if state.style.finish.isMasked {
+                    TintWell(color: style.overlayColor, label: "Ink")
+                    HStack(spacing: 6) {
+                        Button("White") { state.style.overlayColor = .white }
+                        Button("Black") { state.style.overlayColor = .black }
+                        Button("Folder Tint") { state.style.overlayColor = state.style.tint }
+                    }
+                    .controlSize(.small)
+                    .buttonStyle(.bordered)
                 }
-                .controlSize(.small)
-                .buttonStyle(.bordered)
-            }
 
-            Toggle(isOn: style.overlayShadow) {
-                Text("Drop shadow").font(.system(size: 12))
-            }
-            .toggleStyle(.switch)
-            .controlSize(.mini)
-            .disabled(state.style.finish == .stamped)
+                Toggle(isOn: style.overlayShadow) {
+                    Text("Drop shadow").font(.system(size: 12))
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .disabled(state.style.finish == .stamped)
 
-            Divider()
+                Divider()
+            }
 
             SectionLabel(text: "Placement", symbol: "move.3d")
+            if state.style.overlay.kind == .image {
+                Picker("", selection: imagePlacementMode) {
+                    ForEach(ImagePlacementMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
+            }
             LabeledSlider(title: "Size", value: style.overlayScale,
-                          range: 0.15...0.75, defaultValue: 0.42, format: "%.0f%%",
+                          range: state.style.overlay.kind == .image ? 0.15...2.4 : 0.15...0.75,
+                          defaultValue: state.style.overlay.kind == .image ? 1.0 : 0.42,
+                          format: "%.0f%%",
                           symbol: "arrow.up.left.and.arrow.down.right", displayScale: 100)
             LabeledSlider(title: "Opacity", value: style.overlayOpacity,
-                          range: 0...1, defaultValue: 0.92, format: "%.0f%%",
+                          range: 0...1,
+                          defaultValue: state.style.overlay.kind == .image ? 1.0 : 0.92,
+                          format: "%.0f%%",
                           symbol: "circle.lefthalf.filled", displayScale: 100)
             LabeledSlider(title: "Horizontal", value: style.overlayOffsetX,
                           range: -0.3...0.3, defaultValue: 0, format: "%+.2f",
@@ -264,9 +303,20 @@ private struct IconTab: View {
             LabeledSlider(title: "Vertical", value: style.overlayOffsetY,
                           range: -0.3...0.3, defaultValue: 0, format: "%+.2f",
                           symbol: "arrow.up.and.down")
-            LabeledSlider(title: "Rotation", value: style.overlayRotation,
-                          range: -180...180, defaultValue: 0, format: "%.0f°",
-                          symbol: "rotate.right")
+            if state.style.overlay.kind != .image {
+                LabeledSlider(title: "Rotation", value: style.overlayRotation,
+                              range: -180...180, defaultValue: 0, format: "%.0f°",
+                              symbol: "rotate.right")
+            }
+            if state.style.overlay.kind == .image {
+                Button {
+                    setImagePlacement(scale: 1.0)
+                } label: {
+                    Label("Reset Image Placement", systemImage: "arrow.counterclockwise")
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+            }
         }
     }
 
@@ -334,11 +384,13 @@ private struct IconTab: View {
                         style: StrokeStyle(lineWidth: imageDropTargeted ? 2 : 1, dash: [5, 3])
                     )
 
-                if let data = state.style.overlay.imageData, let image = NSImage(data: data) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .padding(10)
+                if state.style.overlay.imageData != nil {
+                    GeometryReader { geometry in
+                        FolderIconView(style: state.style, side: 96)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .gesture(imageDragGesture(in: geometry.size))
+                    }
                 } else {
                     VStack(spacing: 5) {
                         Image(systemName: "photo.on.rectangle.angled")
@@ -385,6 +437,7 @@ private struct IconTab: View {
         state.style.fullIconData = nil
         state.style.overlay.imageData = png
         state.style.overlay.kind = .image
+        setImagePlacement(scale: 1.0)
         // Photos and logos want their own colors.
         if state.style.finish.isMasked { state.style.finish = .natural }
         return true
@@ -396,6 +449,33 @@ private struct IconTab: View {
         panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         loadImage(from: url)
+    }
+
+    private func setImagePlacement(scale: Double) {
+        state.style.overlayScale = scale
+        state.style.overlayOpacity = 1.0
+        state.style.overlayOffsetX = 0
+        state.style.overlayOffsetY = 0
+        state.style.overlayRotation = 0
+    }
+
+    private func imageDragGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if dragStartOffset == nil {
+                    dragStartOffset = CGPoint(x: state.style.overlayOffsetX,
+                                              y: state.style.overlayOffsetY)
+                }
+                let base = dragStartOffset ?? .zero
+                let divisor = max(min(size.width, size.height), 1)
+                state.style.overlayOffsetX = clamp(Double(base.x + value.translation.width / divisor))
+                state.style.overlayOffsetY = clamp(Double(base.y - value.translation.height / divisor))
+            }
+            .onEnded { _ in dragStartOffset = nil }
+    }
+
+    private func clamp(_ value: Double) -> Double {
+        min(0.3, max(-0.3, value))
     }
 }
 

@@ -710,6 +710,11 @@ final class AppState {
             style.fullIconData = nil
             style.overlay.kind = .image
             style.overlay.imageData = png
+            style.overlayScale = 1.0
+            style.overlayOpacity = 1.0
+            style.overlayOffsetX = 0
+            style.overlayOffsetY = 0
+            style.overlayRotation = 0
             if style.finish.isMasked { style.finish = .natural }
         }
         inspectorTab = .icon

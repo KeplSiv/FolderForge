@@ -125,6 +125,8 @@ enum CLI {
             } else {
                 style.overlay.kind = .image
                 style.overlay.imageData = png
+                style.overlayScale = 1.0
+                style.overlayOpacity = 1.0
                 style.finish = .natural
             }
         }

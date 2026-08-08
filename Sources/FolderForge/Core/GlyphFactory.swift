@@ -134,6 +134,31 @@ enum GlyphFactory {
         return ctx.makeImage()
     }
 
+    /// Draws an NSImage into a square, scaled to cover it. Used when photos become the folder
+    /// artwork rather than a small overlay glyph.
+    static func rasterizeFilling(_ image: NSImage, side: Int) -> CGImage? {
+        guard let ctx = IconRenderer.makeContext(pixels: side) else { return nil }
+        let graphics = NSGraphicsContext(cgContext: ctx, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = graphics
+
+        let source = image.size
+        guard source.width > 0, source.height > 0 else {
+            NSGraphicsContext.restoreGraphicsState()
+            return nil
+        }
+
+        let scale = max(CGFloat(side) / source.width, CGFloat(side) / source.height)
+        let drawn = NSSize(width: source.width * scale, height: source.height * scale)
+        let frame = NSRect(x: (CGFloat(side) - drawn.width) / 2,
+                           y: (CGFloat(side) - drawn.height) / 2,
+                           width: drawn.width, height: drawn.height)
+        image.draw(in: frame, from: .zero, operation: .sourceOver, fraction: 1)
+
+        NSGraphicsContext.restoreGraphicsState()
+        return ctx.makeImage()
+    }
+
     /// Normalizes any dropped/imported image to PNG bytes for storage in a style.
     static func pngData(from image: NSImage) -> Data? {
         var rect = CGRect(x: 0, y: 0, width: image.size.width, height: image.size.height)

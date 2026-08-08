@@ -13,6 +13,8 @@
 #   DEVELOPER_ID_APPLICATION  "Developer ID Application: Your Name (TEAMID)"
 #   NOTARY_PROFILE            keychain profile from `xcrun notarytool store-credentials`
 #                             (defaults to "notarytool-profile")
+#   NOTARY_TIMEOUT            max time to wait for Apple before returning
+#                             (defaults to "20m"; the submission keeps processing)
 #
 set -euo pipefail
 
@@ -32,6 +34,7 @@ DMG="$DIST/$APP_NAME.dmg"
 ENTITLEMENTS="Resources/$APP_NAME.entitlements"
 
 NOTARY_PROFILE="${NOTARY_PROFILE:-notarytool-profile}"
+NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-20m}"
 
 DO_INSTALL=false
 DO_RUN=false
@@ -188,8 +191,11 @@ fi
 # ---------------------------------------------------------------- notarize
 
 if $DO_NOTARIZE; then
-  step "Submitting for notarization (this can take a few minutes)"
-  xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+  step "Submitting for notarization (timeout: $NOTARY_TIMEOUT)"
+  xcrun notarytool submit "$DMG" \
+    --keychain-profile "$NOTARY_PROFILE" \
+    --wait \
+    --timeout "$NOTARY_TIMEOUT"
 
   step "Stapling ticket"
   xcrun stapler staple "$DMG"

@@ -33,6 +33,9 @@ enum IconRenderer {
         let toned = applyTone(colored, style: style) ?? colored
 
         guard !style.overlay.isEmpty, style.overlay.kind != .none else { return toned }
+        if style.overlay.kind == .image {
+            return compositeImageArtwork(style: style, onto: toned, mask: base, pixels: pixels) ?? toned
+        }
         return composite(overlay: style, onto: toned, pixels: pixels) ?? toned
     }
 
@@ -160,7 +163,65 @@ enum IconRenderer {
         return ciContext.createCGImage(output, from: input.extent)
     }
 
-    // MARK: - Step 4: overlay
+    // MARK: - Step 4: image artwork
+
+    private static func compositeImageArtwork(style: FolderStyle,
+                                              onto folder: CGImage,
+                                              mask: CGImage,
+                                              pixels: Int) -> CGImage? {
+        guard let data = style.overlay.imageData,
+              let image = NSImage(data: data) else { return folder }
+        guard let ctx = makeContext(pixels: pixels) else { return folder }
+
+        let side = CGFloat(pixels)
+        let full = CGRect(x: 0, y: 0, width: side, height: side)
+        ctx.draw(folder, in: full)
+        ctx.interpolationQuality = .high
+
+        guard let artwork = GlyphFactory.rasterizeFilling(image, side: pixels) else { return folder }
+
+        let zoom = max(0.35, CGFloat(style.overlayScale))
+        let drawSide = side * zoom
+        let cx = side * (0.5 + CGFloat(style.overlayOffsetX))
+        let cy = side * (0.47 + CGFloat(style.overlayOffsetY))
+        let frame = CGRect(x: cx - drawSide / 2, y: cy - drawSide / 2,
+                           width: drawSide, height: drawSide)
+
+        let alpha = CGFloat(style.overlayOpacity)
+        ctx.saveGState()
+        if abs(style.overlayRotation) > 0.01 {
+            ctx.translateBy(x: cx, y: cy)
+            ctx.rotate(by: CGFloat(style.overlayRotation) * .pi / 180)
+            ctx.translateBy(x: -cx, y: -cy)
+        }
+        ctx.setAlpha(alpha)
+        ctx.draw(artwork, in: frame)
+        ctx.restoreGState()
+
+        // Keep the photo inside the real folder silhouette, including the tab and rounded body.
+        ctx.saveGState()
+        ctx.setBlendMode(.destinationIn)
+        ctx.setAlpha(1)
+        ctx.draw(mask, in: full)
+        ctx.restoreGState()
+
+        // Put the stock highlights/shadows back over the image so it still reads as a folder.
+        ctx.saveGState()
+        ctx.setBlendMode(.softLight)
+        ctx.setAlpha(0.35)
+        ctx.draw(folder, in: full)
+        ctx.restoreGState()
+
+        ctx.saveGState()
+        ctx.setBlendMode(.sourceAtop)
+        ctx.setAlpha(0.18)
+        ctx.draw(folder, in: full)
+        ctx.restoreGState()
+
+        return ctx.makeImage()
+    }
+
+    // MARK: - Step 5: overlay
 
     private static func composite(overlay style: FolderStyle,
                                   onto folder: CGImage,
