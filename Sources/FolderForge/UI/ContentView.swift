@@ -95,6 +95,13 @@ struct ContentView: View {
         }
 
         ToolbarItem {
+            Button { state.refreshFinder() } label: {
+                Text("Refresh Finder")
+            }
+            .help("Refresh Finder if macOS is still showing cached folder icons")
+        }
+
+        ToolbarItem {
             Button { state.randomize() } label: {
                 Label("Surprise Me", systemImage: "dice")
             }

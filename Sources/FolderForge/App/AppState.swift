@@ -219,6 +219,29 @@ final class AppState {
         addFolders(paths)
     }
 
+    func refreshFinder() {
+        if !targets.isEmpty {
+            for item in targets {
+                NSWorkspace.shared.noteFileSystemChanged(item.url.path)
+                NSWorkspace.shared.noteFileSystemChanged(item.url.deletingLastPathComponent().path)
+            }
+        }
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
+        process.arguments = ["Finder"]
+        do {
+            try process.run()
+            process.waitUntilExit()
+            toast = process.terminationStatus == 0
+                ? Toast(kind: .success, message: "Finder refreshed")
+                : Toast(kind: .failure, message: "Couldn't refresh Finder")
+        } catch {
+            toast = Toast(kind: .failure, message: "Couldn't refresh Finder",
+                          detail: error.localizedDescription)
+        }
+    }
+
     /// Creates a sandbox folder full of examples so you can see the result immediately.
     func createSampleFolders(in parent: URL) {
         let root = parent.appendingPathComponent("FolderForge Samples", isDirectory: true)

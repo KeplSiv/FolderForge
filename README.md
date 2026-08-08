@@ -129,6 +129,7 @@ plain.
 
 - <kbd>⌥⌘Z</kbd> undoes the last batch apply.
 - <kbd>⌥⌘C</kbd> / <kbd>⌥⌘V</kbd> copy and paste a design between folders.
+- **Refresh Finder** nudges Finder when macOS is still showing a cached old icon.
 
 > [!IMPORTANT]
 > **Icons FolderForge didn't make can't be reverse-engineered into settings.** A custom icon
