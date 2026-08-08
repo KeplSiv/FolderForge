@@ -1,9 +1,11 @@
 <div align="center">
 
-<h1>
-  <img src="screenshots/app-logo.png" width="52" height="52" alt="FolderForge logo" align="center">
-  FolderForge
-</h1>
+<table>
+  <tr>
+    <td><img src="screenshots/app-logo.png" width="64" height="64" alt="FolderForge logo"></td>
+    <td><h1>FolderForge</h1></td>
+  </tr>
+</table>
 
 **A macOS folder icon designer.**
 Pick a color, drop on a symbol, emoji, image or custom ICNS, and write it straight to your
