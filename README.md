@@ -262,7 +262,7 @@ Every style flag from `--help` works with `--apply`, `--export` and `--iconset`.
 <summary><b>Development aids (hidden, not in <code>--help</code>)</b></summary>
 
 ```bash
-FolderForge --ui-snapshot out.png --width 900 --height 620 [--view main|sheet]
+FolderForge --ui-snapshot out.png --width 900 --height 620 [--view main|sheet] [--tab color|icon|tune] [--overlay icns] [--icon file.icns]
 FolderForge --debug-selection <folder...>
 ```
 
