@@ -159,7 +159,7 @@ struct PreviewPane: View {
                 Text("This is the folder's existing icon")
                     .font(.system(size: 11, weight: .medium))
                 Text("It wasn't made in FolderForge, so there are no settings to load. "
-                     + "Start designing to replace it — Restore brings this one back.")
+                     + "Start designing to replace it. Restore brings this one back.")
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -79,7 +79,7 @@ struct ContentView: View {
     private var subtitle: String {
         let count = state.targets.count
         if count == 0 { return "No folders yet" }
-        if state.selection.isEmpty { return "\(count) folder\(count == 1 ? "" : "s") — all" }
+        if state.selection.isEmpty { return "\(count) folder\(count == 1 ? "" : "s") - all" }
         return "\(count) selected"
     }
 

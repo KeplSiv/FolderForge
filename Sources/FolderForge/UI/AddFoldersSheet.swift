@@ -348,7 +348,7 @@ struct AddFoldersSheet: View {
             .toggleStyle(.checkbox)
 
             Toggle(isOn: $options.skipPackages) {
-                Text("Bundles — apps, photo libraries, Xcode projects").font(.system(size: 11))
+                Text("Bundles: apps, photo libraries, Xcode projects").font(.system(size: 11))
             }
             .toggleStyle(.checkbox)
 

@@ -226,7 +226,7 @@ struct EmojiPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text(selection.isEmpty ? "—" : selection)
+                Text(selection.isEmpty ? "-" : selection)
                     .font(.system(size: 26))
                     .frame(width: 44, height: 44)
                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))

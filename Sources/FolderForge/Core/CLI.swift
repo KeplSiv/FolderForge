@@ -222,7 +222,7 @@ enum CLI {
         NSGraphicsContext.restoreGraphicsState()
 
         guard let cg = ctx.makeImage(), writePNG(cg, to: URL(fileURLWithPath: out)) else { return 1 }
-        print("Wrote \(out) — \(styles.count) styles")
+        print("Wrote \(out) - \(styles.count) styles")
         return 0
     }
 
@@ -454,7 +454,7 @@ enum CLI {
 
     private static func printUsage() {
         print("""
-        FolderForge — macOS folder icon designer
+        FolderForge - macOS folder icon designer
 
         Launch with no arguments to open the app.
 
@@ -501,7 +501,7 @@ enum CLI {
           # every immediate subfolder of ~/Clients, but not ~/Clients itself
           FolderForge --apply ~/Clients --depth 1 --no-root --preset Work
 
-          # the whole tree, skipping build output — check first, then commit
+          # the whole tree, skipping build output; check first, then commit
           FolderForge --apply ~/Code --recursive --exclude 'node_modules,dist,build' --dry-run
           FolderForge --apply ~/Code --recursive --exclude 'node_modules,dist,build' --preset Code
         """)
