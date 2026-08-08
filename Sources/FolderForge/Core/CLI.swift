@@ -496,7 +496,7 @@ enum CLI {
           --symbol <sf.symbol>    SF Symbol overlay
           --emoji <emoji>         emoji overlay
           --text <string>         text overlay
-          --image <file>          image overlay, or full icon when the file is ICNS
+          --image <file>          image fill, or full icon when the file is ICNS
           --finish <name>         engraved | tinted | natural | stamped | raised
           --base <name>           generic | documents | downloads | …
           --scale <0…1>           overlay size

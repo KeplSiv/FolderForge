@@ -8,8 +8,9 @@
 </table>
 
 **A macOS folder icon designer.**
-Pick a color, drop on a symbol, emoji, image or custom ICNS, and write it straight to your
-folders — with a one-click path back to the originals.
+Pick a color or image fill, layer on a symbol, emoji or text overlay, or import a complete
+custom ICNS — then write it straight to your folders with a one-click path back to the
+originals.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=flat-square&logo=apple)
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-F05138?style=flat-square&logo=swift&logoColor=white)
@@ -145,31 +146,42 @@ FolderForge touches a folder, it snapshots whatever icon was already there.
 
 ## What you can change
 
-<!-- 📸 screenshots/inspector.png -->
-
-![Inspector](screenshots/inspector.png)
-
 ### Color
 
 Any color, or a two-color gradient at any angle. 60+ curated swatches and 10 gradient
 presets. Tint strength blends back toward the stock macOS blue.
 
-### Icon — 300+ SF Symbols, emoji, text, images or custom ICNS
+### Fill — color, image or complete ICNS
 
-Choose from:
+Fill controls what the folder face is made from:
 
-- searchable SF Symbols
-- emoji
-- short text
-- regular images placed on the folder canvas
-- custom `.icns` files used as the whole folder icon
+- **Color** uses the Color tab's tint or gradient.
+- **Image** places PNG/JPG-style artwork inside the folder shape.
+- **ICNS** imports a complete `.icns` file as the whole folder icon.
 
-Images can be sized, faded, rotated and positioned freely. ICNS files stay complete: they
-replace the folder icon instead of becoming an overlay.
+Image fills can be fit or filled, faded, dragged into position and reset without touching the
+overlay controls.
 
-External downloaded `.icns` files apply as complete icons:
+![Image fill controls](screenshots/fill-image.png)
 
-![External ICNS import](screenshots/icns-import.png)
+### Icon — 300+ SF Symbols, emoji or text overlays
+
+The Icon tab now stays focused on overlays. Choose searchable SF Symbols, emoji or short text,
+then tune placement and finish separately from the fill underneath. That means an image fill can
+still carry a symbol, emoji or label on top.
+
+![Overlay controls](screenshots/icon-overlay.png)
+
+External downloaded `.icns` files are different: they apply as complete icons rather than
+editable overlays. Once an ICNS is loaded, Color, Icon and Tune controls are disabled because
+there is no folder canvas left to edit.
+
+![ICNS fill import](screenshots/icns-fill.png)
+
+### Finishes
+
+Finishes decide how overlays sit on the folder: carved in, stamped on, raised above the
+surface, or kept in their natural colors.
 
 <!-- 📸 screenshots/finishes.png -->
 
@@ -183,9 +195,9 @@ External downloaded `.icns` files apply as complete icons:
 | **Stamped**  | Dark ink pressed into the folder.                              |
 | **Raised**   | Bright and glossy, floating above with a soft shadow.          |
 
-Emoji and images carry their own colors, so picking one switches the finish to **Natural**
-automatically — a masked finish would flatten them to white silhouettes. ICNS files are
-applied as complete icons. Switching back to a symbol restores **Engraved**.
+Emoji and image fills carry their own colors, so they use **Natural** rendering where masking
+would flatten the artwork. ICNS files are applied as complete icons. Switching back to a symbol
+restores **Engraved**.
 
 ### Tune
 
@@ -271,7 +283,7 @@ Every style flag from `--help` works with `--apply`, `--export` and `--iconset`.
 ### Development aids
 
 ```bash
-FolderForge --ui-snapshot out.png --width 900 --height 620 [--view main|sheet] [--tab color|icon|tune] [--overlay icns] [--icon file.icns]
+FolderForge --ui-snapshot out.png --width 900 --height 620 [--view main|sheet] [--tab color|fill|icon|tune] [--image file.png] [--icon file.icns]
 FolderForge --debug-selection <folder...>
 ```
 
