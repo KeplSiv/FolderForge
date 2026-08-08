@@ -18,6 +18,9 @@ struct AddFoldersSheet: View {
     @State private var scanTask: Task<Void, Never>?
     @State private var completions: [URL] = []
     @State private var showCompletions = false
+    @State private var finiteDepth = 1
+    @State private var availableDepth = 0
+    @State private var depthScanTruncated = false
     /// The preview tree starts fully expanded; this tracks what the user has closed.
     @State private var collapsedPreviewURLs: Set<URL> = []
     @FocusState private var pathFocused: Bool
@@ -41,6 +44,35 @@ struct AddFoldersSheet: View {
     }
 
     private var resolvedRoot: URL? { FolderScanner.resolve(path: pathText) }
+    private var finiteDepthBinding: Binding<Int> {
+        Binding {
+            options.depth == Int.max ? finiteDepth : options.depth
+        } set: { newValue in
+            let clamped = min(maxSelectableDepth, max(0, newValue))
+            finiteDepth = clamped
+            options.depth = clamped
+        }
+    }
+    private var sliderDepthBinding: Binding<Double> {
+        Binding {
+            Double(finiteDepthBinding.wrappedValue)
+        } set: { newValue in
+            finiteDepthBinding.wrappedValue = Int(newValue.rounded())
+        }
+    }
+    private var allLevelsBinding: Binding<Bool> {
+        Binding {
+            options.depth == Int.max
+        } set: { enabled in
+            if enabled {
+                finiteDepth = options.depth == Int.max ? finiteDepth : options.depth
+                options.depth = Int.max
+            } else {
+                options.depth = finiteDepth
+            }
+        }
+    }
+    private var maxSelectableDepth: Int { max(0, availableDepth) }
 
     private var rootExists: Bool {
         guard let root = resolvedRoot else { return false }
@@ -245,13 +277,29 @@ struct AddFoldersSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel(text: "How deep", symbol: "arrow.down.to.line")
 
-            Picker("", selection: $options.depth) {
-                ForEach(FolderScanner.Options.depthChoices, id: \.value) { choice in
-                    Text(choice.label).tag(choice.value)
-                }
+            Toggle(isOn: allLevelsBinding) {
+                Text("All levels").font(.system(size: 11))
             }
-            .labelsHidden()
-            .pickerStyle(.radioGroup)
+            .toggleStyle(.checkbox)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(depthLabel(finiteDepthBinding.wrappedValue))
+                        .font(.system(size: 11, weight: .medium))
+                    Spacer()
+                    Stepper("", value: finiteDepthBinding, in: 0...maxSelectableDepth)
+                        .labelsHidden()
+                        .disabled(options.depth == Int.max)
+                }
+
+                Slider(value: sliderDepthBinding, in: 0...Double(max(1, maxSelectableDepth)), step: 1)
+                    .disabled(options.depth == Int.max || maxSelectableDepth == 0)
+
+                Text(availableDepthLabel)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+            .opacity(options.depth == Int.max ? 0.45 : 1)
 
             Toggle(isOn: $options.includeRoot) {
                 Text("Include the folder itself, not just what's inside it")
@@ -265,8 +313,27 @@ struct AddFoldersSheet: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            } else if depthScanTruncated {
+                Label("Depth range is based on the first \(options.maxResults) folders found.",
+                      systemImage: "info.circle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private func depthLabel(_ depth: Int) -> String {
+        switch depth {
+        case 0: "This folder only"
+        case 1: "1 level down"
+        default: "\(depth) levels down"
+        }
+    }
+
+    private var availableDepthLabel: String {
+        if maxSelectableDepth == 0 { return "No nested folders found" }
+        return "Available: \(depthLabel(maxSelectableDepth))"
     }
 
     // MARK: - Filters
@@ -456,6 +523,8 @@ struct AddFoldersSheet: View {
 
         guard let root = resolvedRoot, rootExists else {
             preview = nil
+            availableDepth = 0
+            depthScanTruncated = false
             scanning = false
             return
         }
@@ -469,12 +538,23 @@ struct AddFoldersSheet: View {
             try? await Task.sleep(for: .milliseconds(200))
             guard !Task.isCancelled else { return }
 
-            let result = await Task.detached(priority: .userInitiated) {
-                FolderScanner.scan(root: root, options: current)
+            let scan = await Task.detached(priority: .userInitiated) {
+                var depthProbe = current
+                depthProbe.depth = Int.max
+                depthProbe.includeRoot = false
+                let result = FolderScanner.scan(root: root, options: current)
+                let available = FolderScanner.scan(root: root, options: depthProbe)
+                return (result: result, depthProbe: available)
             }.value
 
             guard !Task.isCancelled else { return }
-            preview = result
+            preview = scan.result
+            availableDepth = scan.depthProbe.deepestLevel
+            depthScanTruncated = scan.depthProbe.truncated
+            if options.depth != Int.max, options.depth > availableDepth {
+                options.depth = availableDepth
+            }
+            finiteDepth = options.depth == Int.max ? min(finiteDepth, availableDepth) : options.depth
             scanning = false
         }
     }

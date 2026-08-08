@@ -143,11 +143,15 @@ private struct IconTab: View {
             // turns them into a flat white silhouette, which nobody is asking for.
             switch kind {
             case .emoji, .image:
+                state.style.fullIconData = nil
                 if state.style.finish.isMasked { state.style.finish = .natural }
             case .symbol, .text:
+                state.style.fullIconData = nil
                 if state.style.finish == .natural { state.style.finish = .engraved }
             case .none:
-                break
+                state.style.fullIconData = nil
+            case .icns:
+                state.style.overlay.imageData = nil
             }
         }
 
@@ -207,9 +211,12 @@ private struct IconTab: View {
 
         case .image:
             imageWell
+
+        case .icns:
+            importedFullIconWell
         }
 
-        if state.style.overlay.kind != .none {
+        if state.style.overlay.kind != .none && state.style.overlay.kind != .icns {
             Divider()
 
             SectionLabel(text: "Finish", symbol: "paintbrush")
@@ -263,6 +270,59 @@ private struct IconTab: View {
         }
     }
 
+    private var importedFullIconWell: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Imported Icon", symbol: "app.dashed")
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.quaternary.opacity(0.4))
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(
+                        imageDropTargeted ? Color.accentColor : Color.secondary.opacity(0.35),
+                        style: StrokeStyle(lineWidth: imageDropTargeted ? 2 : 1, dash: [5, 3])
+                    )
+
+                if let data = state.style.fullIconData, let image = NSImage(data: data) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(10)
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: "app.dashed")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Drop an ICNS")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text("Applies as the whole folder icon")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .frame(height: 140)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                return loadImage(from: url)
+            } isTargeted: { imageDropTargeted = $0 }
+
+            Text("This ICNS will be applied as the whole folder icon.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+
+            HStack(spacing: 6) {
+                Button("Choose…") { chooseImage() }
+                Button("Use Folder Canvas") {
+                    state.style.fullIconData = nil
+                    state.style.overlay.kind = .none
+                }
+            }
+            .controlSize(.small)
+        }
+    }
+
     private var imageWell: some View {
         VStack(spacing: 8) {
             ZStack {
@@ -287,7 +347,7 @@ private struct IconTab: View {
                         Text("Drop an image")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
-                        Text("PNG with transparency works best")
+                        Text("PNG or ICNS works best")
                             .font(.system(size: 9))
                             .foregroundStyle(.tertiary)
                     }
@@ -311,11 +371,18 @@ private struct IconTab: View {
 
     @discardableResult
     private func loadImage(from url: URL) -> Bool {
-        guard let image = NSImage(contentsOf: url),
-              let png = GlyphFactory.pngData(from: image) else {
-            state.toast = Toast(kind: .failure, message: "Couldn't read that image")
+        guard let png = IconImport.pngData(from: url) else {
+            state.toast = Toast(kind: .failure, message: "Couldn't read that image or icon")
             return false
         }
+        if IconImport.isICNS(url) {
+            state.style.fullIconData = png
+            state.style.overlay.imageData = nil
+            state.style.overlay.kind = .icns
+            state.toast = Toast(kind: .success, message: "Imported \(url.lastPathComponent)")
+            return true
+        }
+        state.style.fullIconData = nil
         state.style.overlay.imageData = png
         state.style.overlay.kind = .image
         // Photos and logos want their own colors.
@@ -325,7 +392,7 @@ private struct IconTab: View {
 
     private func chooseImage() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.image]
+        panel.allowedContentTypes = IconImport.allowedContentTypes
         panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
         loadImage(from: url)

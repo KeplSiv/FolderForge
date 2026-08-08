@@ -23,6 +23,10 @@ enum IconRenderer {
     // MARK: - Public
 
     static func render(_ style: FolderStyle, pixels: Int) -> CGImage? {
+        if let data = style.fullIconData, let image = NSImage(data: data) {
+            return GlyphFactory.rasterizeFitting(image, side: pixels)
+        }
+
         guard let base = BaseIconProvider.cgImage(style.baseIcon, pixels: pixels) else { return nil }
 
         let colored = recolor(base: base, style: style, pixels: pixels) ?? base

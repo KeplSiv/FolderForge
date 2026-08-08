@@ -5,7 +5,7 @@
 # FolderForge
 
 **A macOS folder icon designer.**
-Pick a color, drop on a symbol, emoji or your own image, and write it straight to your
+Pick a color, drop on a symbol, emoji, image or custom ICNS, and write it straight to your
 folders — with a one-click path back to the originals.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=flat-square&logo=apple)
@@ -107,8 +107,8 @@ the List**.
 The Add Folders sheet takes a path — with `~`, tab-style completion and shortcuts to Home /
 Desktop / Documents / Downloads — then asks two questions:
 
-**How deep?** This folder only, 1 / 2 / 3 / 5 levels down, or all levels. Plus whether the
-root itself is included, so you can style just the children of `~/Clients` and leave
+**How deep?** Pick an exact depth from the folder tree, or choose all levels. Plus whether
+the root itself is included, so you can style just the children of `~/Clients` and leave
 `~/Clients` alone.
 
 **What to leave out?** Hidden dot-folders, bundles (`.app`, `.photoslibrary`, `.xcodeproj`),
@@ -152,10 +152,12 @@ presets. Tint strength blends back toward the stock macOS blue.
 </details>
 
 <details open>
-<summary><b>⭐️ Icon — 300+ SF Symbols, emoji, text or your own image</b></summary>
+<summary><b>⭐️ Icon — 300+ SF Symbols, emoji, text, images or custom ICNS</b></summary>
 
-Searchable symbol browser by category, plus emoji, short text, or any image you drop in.
-Then size, opacity, rotation and free positioning.
+Searchable symbol browser by category, plus emoji, short text, images, or custom `.icns`
+files. Drag and drop an ICNS or choose one from the picker to use it as the whole folder icon.
+Regular images stay as artwork on the folder canvas, with size, opacity, rotation and free
+positioning.
 
 <!-- 📸 screenshots/finishes.png -->
 
@@ -170,8 +172,8 @@ Then size, opacity, rotation and free positioning.
 | **Raised**   | Bright and glossy, floating above with a soft shadow.          |
 
 Emoji and images carry their own colors, so picking one switches the finish to **Natural**
-automatically — a masked finish would flatten them to white silhouettes. Switching back to a
-symbol restores **Engraved**.
+automatically — a masked finish would flatten them to white silhouettes. ICNS files are
+applied as complete icons. Switching back to a symbol restores **Engraved**.
 
 </details>
 
@@ -242,6 +244,7 @@ $FF --apply ~/Code --recursive --exclude 'node_modules,dist,build' --preset Code
 $FF --reset ~/Code --recursive
 
 $FF --export icon.png --preset Ocean --size 1024
+$FF --export icon.png --image CustomIcon.icns
 $FF --iconset MyIcon.iconset --preset Ocean
 $FF --contact-sheet all.png          # every built-in preset in one grid
 $FF --list-presets

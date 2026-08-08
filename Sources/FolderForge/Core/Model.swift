@@ -110,7 +110,7 @@ enum BaseIconKind: String, Codable, CaseIterable, Identifiable {
 // MARK: - Overlay
 
 enum OverlayKind: String, Codable, CaseIterable, Identifiable {
-    case none, symbol, emoji, text, image
+    case none, symbol, emoji, text, image, icns
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -119,6 +119,7 @@ enum OverlayKind: String, Codable, CaseIterable, Identifiable {
         case .emoji: "Emoji"
         case .text: "Text"
         case .image: "Image"
+        case .icns: "ICNS"
         }
     }
 }
@@ -190,6 +191,7 @@ struct Overlay: Codable, Hashable {
         case .emoji: emoji.isEmpty
         case .text: text.isEmpty
         case .image: imageData == nil
+        case .icns: false
         }
     }
 }
@@ -215,6 +217,10 @@ struct FolderStyle: Codable, Hashable, Identifiable {
     var saturation: Double = 1.0            // 0…2
     var brightness: Double = 0.0            // -0.35…0.35
     var contrast: Double = 1.0              // 0.6…1.6
+
+    /// Full replacement icon bytes, used for imported `.icns` artwork. When this is set,
+    /// FolderForge applies these pixels as the folder icon instead of composing a stock folder.
+    var fullIconData: Data?
 
     // Overlay
     var overlay = Overlay()
@@ -281,6 +287,7 @@ struct FolderStyle: Codable, Hashable, Identifiable {
         saturation = value(.saturation, blank.saturation)
         brightness = value(.brightness, blank.brightness)
         contrast = value(.contrast, blank.contrast)
+        fullIconData = (try? container.decodeIfPresent(Data.self, forKey: .fullIconData)) ?? nil
         overlay = value(.overlay, blank.overlay)
         finish = value(.finish, blank.finish)
         overlayColor = value(.overlayColor, blank.overlayColor)

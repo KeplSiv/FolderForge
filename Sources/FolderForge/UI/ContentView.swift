@@ -56,6 +56,12 @@ struct ContentView: View {
                  : "Nothing is selected, so this restores the original icon on every folder in the list.")
         }
         .frame(minWidth: 720, minHeight: 480)
+        .onReceive(NotificationCenter.default.publisher(for: .folderForgeOpenURLs)) { notification in
+            let pending = AppDelegate.drainPendingOpenURLs()
+            let urls = pending.isEmpty ? (notification.object as? [URL] ?? []) : pending
+            guard !urls.isEmpty else { return }
+            state.handleOpenURLs(urls)
+        }
         .onChange(of: state.selection) { _, _ in
             state.syncStyleToSelection()
         }

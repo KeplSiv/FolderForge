@@ -6,6 +6,13 @@
 #   ./build.sh --install    also copy it into /Applications
 #   ./build.sh --run        build, then launch it
 #   ./build.sh --zip        also produce a distributable zip
+#   ./build.sh --dmg        also produce a distributable dmg
+#   ./build.sh --notarize   sign with Developer ID, build a dmg, notarize + staple it
+#
+# --notarize requires:
+#   DEVELOPER_ID_APPLICATION  "Developer ID Application: Your Name (TEAMID)"
+#   NOTARY_PROFILE            keychain profile from `xcrun notarytool store-credentials`
+#                             (defaults to "notarytool-profile")
 #
 set -euo pipefail
 
@@ -13,25 +20,33 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.0.0"
-BUILD="1"
+VERSION="1.0.1"
+BUILD="2"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
 CONTENTS="$APP/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
+DMG="$DIST/$APP_NAME.dmg"
+ENTITLEMENTS="Resources/$APP_NAME.entitlements"
+
+NOTARY_PROFILE="${NOTARY_PROFILE:-notarytool-profile}"
 
 DO_INSTALL=false
 DO_RUN=false
 DO_ZIP=false
+DO_DMG=false
+DO_NOTARIZE=false
 for arg in "$@"; do
   case "$arg" in
-    --install) DO_INSTALL=true ;;
-    --run)     DO_RUN=true ;;
-    --zip)     DO_ZIP=true ;;
+    --install)  DO_INSTALL=true ;;
+    --run)      DO_RUN=true ;;
+    --zip)      DO_ZIP=true ;;
+    --dmg)      DO_DMG=true ;;
+    --notarize) DO_NOTARIZE=true; DO_DMG=true ;;
     --help|-h)
-      sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) echo "Unknown option: $arg" >&2; exit 1 ;;
   esac
@@ -96,6 +111,21 @@ cat > "$CONTENTS/Info.plist" <<PLIST
             <key>LSHandlerRank</key>        <string>Owner</string>
             <key>CFBundleTypeExtensions</key><array><string>folderstyle</string></array>
         </dict>
+        <dict>
+            <key>CFBundleTypeName</key>     <string>Icon Artwork</string>
+            <key>CFBundleTypeRole</key>     <string>Editor</string>
+            <key>LSHandlerRank</key>        <string>Alternate</string>
+            <key>CFBundleTypeExtensions</key>
+            <array>
+                <string>icns</string>
+                <string>png</string>
+                <string>jpg</string>
+                <string>jpeg</string>
+                <string>heic</string>
+                <string>tiff</string>
+                <string>webp</string>
+            </array>
+        </dict>
     </array>
 </dict>
 </plist>
@@ -129,11 +159,44 @@ rm -rf "$ICONSET"
 
 # ---------------------------------------------------------------- sign
 
-step "Signing (ad-hoc)"
-# Ad-hoc signing is enough to run locally and keeps macOS from re-prompting for
-# permissions every launch. Replace "-" with your Developer ID to distribute.
-codesign --force --deep --sign - "$APP" 2>/dev/null || \
-    echo "  (codesign unavailable — the app will still run)"
+if $DO_NOTARIZE; then
+  : "${DEVELOPER_ID_APPLICATION:?Set DEVELOPER_ID_APPLICATION to your \"Developer ID Application: ...\" identity}"
+  step "Signing (Developer ID, hardened runtime)"
+  SIGN_ARGS=(--force --deep --options runtime --sign "$DEVELOPER_ID_APPLICATION")
+  [ -f "$ENTITLEMENTS" ] && SIGN_ARGS+=(--entitlements "$ENTITLEMENTS")
+  codesign "${SIGN_ARGS[@]}" "$APP"
+  codesign --verify --deep --strict --verbose=2 "$APP"
+else
+  step "Signing (ad-hoc)"
+  # Ad-hoc signing is enough to run locally and keeps macOS from re-prompting for
+  # permissions every launch. Use --notarize to sign with a Developer ID instead.
+  codesign --force --deep --sign - "$APP" 2>/dev/null || \
+      echo "  (codesign unavailable — the app will still run)"
+fi
+
+# ---------------------------------------------------------------- dmg
+
+if $DO_DMG; then
+  step "Building $DMG"
+  rm -f "$DMG"
+  hdiutil create -volname "$APP_NAME" -srcfolder "$APP" -ov -format UDZO "$DMG"
+  if $DO_NOTARIZE; then
+    codesign --force --sign "$DEVELOPER_ID_APPLICATION" "$DMG"
+  fi
+fi
+
+# ---------------------------------------------------------------- notarize
+
+if $DO_NOTARIZE; then
+  step "Submitting for notarization (this can take a few minutes)"
+  xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+
+  step "Stapling ticket"
+  xcrun stapler staple "$DMG"
+
+  step "Verifying"
+  spctl -a -t open --context context:primary-signing-identity -v "$DMG"
+fi
 
 # ---------------------------------------------------------------- finish
 
@@ -152,6 +215,7 @@ fi
 
 step "Done"
 echo "  $APP"
+$DO_DMG && echo "  $DMG"
 echo
 echo "  Open it:      open '$APP'"
 echo "  Command line: '$MACOS/$APP_NAME' --help"

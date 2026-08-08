@@ -23,6 +23,8 @@ enum GlyphFactory {
             guard let data = style.overlay.imageData,
                   let image = NSImage(data: data) else { return nil }
             return rasterizeFitting(image, side: side)
+        case .icns:
+            return nil
         }
     }
 

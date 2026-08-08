@@ -8,7 +8,7 @@ itself — regenerate them after a UI change rather than shooting by hand.
 | `hero.png`         | A row of finished folders — the banner at the top.         | Captured in Finder.                |
 | `main-window.png`  | The full app: sidebar tree, preview, inspector.            | `--ui-snapshot`                    |
 | `sidebar-tree.png` | The sidebar with nesting and indent guides.                | Cropped from `main-window.png`.    |
-| `inspector.png`    | The inspector — tint, gradients, palettes.                 | Cropped from `main-window.png`.    |
+| `inspector.png`    | The inspector — custom ICNS as a whole folder icon.         | Cropped from `--tab icon`.         |
 | `add-folders.png`  | The Add Folders sheet: depth, exclusions, match preview.   | `--ui-snapshot --view sheet`       |
 | `presets.png`      | The built-in presets.                                     | `--contact-sheet`                  |
 | `finishes.png`     | Every finish across several tints.                         | `--contact-sheet --finishes`       |
@@ -36,11 +36,12 @@ for d in "Clients/Acme Corp" "Clients/Acme Corp/2026 Contracts" "Clients/Northwi
 FOLDERS=$(find "$D" -type d ! -path "$D" | sort | paste -sd, -)
 "$BIN" --ui-snapshot main-window.png --width 1080 --height 700 --folders "$FOLDERS"
 "$BIN" --ui-snapshot add-folders.png --width 560 --height 780 --view sheet --path "$D"
+"$BIN" --ui-snapshot inspector-source.png --width 1080 --height 700 --tab icon --overlay icns --folders "$FOLDERS"
 "$BIN" --contact-sheet presets.png --columns 8 --cell 180
 "$BIN" --contact-sheet finishes.png --finishes --columns 6 --cell 200
 
 magick main-window.png -crop 480x1120+0+0  +repage sidebar-tree.png
-magick main-window.png -crop 724x1400+1436+0 +repage inspector.png
+magick inspector-source.png -crop 724x1400+1436+0 +repage inspector.png
 magick presets.png     -crop 1440x808+0+0  +repage presets.png
 magick finishes.png    -crop 600x1110+0+0  +repage finishes.png
 ```

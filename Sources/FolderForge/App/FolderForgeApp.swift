@@ -12,6 +12,7 @@ struct FolderForgeApp: App {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate()
                     state.loadCustomizedFolders()
+                    state.handleOpenURLs(AppDelegate.drainPendingOpenURLs())
                 }
         }
         // Comfortably fits the full layout, and small enough to open whole on a 13" display.
@@ -89,6 +90,14 @@ struct FolderForgeApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private static var pendingOpenURLs: [URL] = []
+
+    static func drainPendingOpenURLs() -> [URL] {
+        let urls = pendingOpenURLs
+        pendingOpenURLs.removeAll()
+        return urls
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -99,6 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Folders dropped on the Dock icon land here.
     func application(_ application: NSApplication, open urls: [URL]) {
+        Self.pendingOpenURLs.append(contentsOf: urls)
         NotificationCenter.default.post(name: .folderForgeOpenURLs, object: urls)
     }
 }

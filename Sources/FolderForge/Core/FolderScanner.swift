@@ -30,16 +30,6 @@ enum FolderScanner {
             "*.photoslibrary", "*.xcodeproj", "*.bundle", "__pycache__", ".build",
             "venv", ".venv", "DerivedData", "*.lproj",
         ]
-
-        /// `depth` values the picker offers, plus a label for each.
-        static let depthChoices: [(value: Int, label: String)] = [
-            (0, "This folder only"),
-            (1, "1 level down"),
-            (2, "2 levels down"),
-            (3, "3 levels down"),
-            (5, "5 levels down"),
-            (Int.max, "All levels"),
-        ]
     }
 
     struct Result: Sendable {
@@ -49,6 +39,8 @@ enum FolderScanner {
         /// True if `maxResults` cut the walk short.
         var truncated: Bool
         var excludedCount: Int
+        /// Deepest eligible folder found, measured below the root. Root itself is level 0.
+        var deepestLevel: Int
     }
 
     // MARK: - Scan
@@ -65,9 +57,11 @@ enum FolderScanner {
         var isDirectory: ObjCBool = false
         guard manager.fileExists(atPath: root.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
-            return Result(folders: [], examined: 0, truncated: false, excludedCount: 0)
+            return Result(folders: [], examined: 0, truncated: false,
+                          excludedCount: 0, deepestLevel: 0)
         }
 
+        var deepestLevel = 0
         if options.includeRoot {
             // The root is what the user explicitly asked for — exclusion patterns and the
             // hidden-folder rule shouldn't second-guess that.
@@ -112,6 +106,7 @@ enum FolderScanner {
                        !matches(child, patterns: options.includePatterns) {
                         excluded += 1; continue
                     }
+                    deepestLevel = max(deepestLevel, level + 1)
 
                     guard results.count < options.maxResults else {
                         truncated = true
@@ -130,7 +125,8 @@ enum FolderScanner {
         }
 
         return Result(folders: results, examined: examined,
-                      truncated: truncated, excludedCount: excluded)
+                      truncated: truncated, excludedCount: excluded,
+                      deepestLevel: deepestLevel)
     }
 
     // MARK: - Pattern matching

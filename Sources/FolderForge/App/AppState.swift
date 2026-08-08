@@ -670,4 +670,80 @@ final class AppState {
             ? Toast(kind: .success, message: "Imported \(count) style\(count == 1 ? "" : "s")")
             : Toast(kind: .failure, message: "Nothing readable in that file")
     }
+
+    @discardableResult
+    func importIconFile(_ url: URL) -> Bool {
+        guard let png = IconImport.pngData(from: url) else {
+            toast = Toast(kind: .failure,
+                          message: "Couldn't read that image or icon",
+                          detail: url.lastPathComponent)
+            return false
+        }
+        if IconImport.isICNS(url) {
+            style.fullIconData = png
+            style.overlay.kind = .icns
+            style.overlay.imageData = nil
+        } else {
+            style.fullIconData = nil
+            style.overlay.kind = .image
+            style.overlay.imageData = png
+            if style.finish.isMasked { style.finish = .natural }
+        }
+        inspectorTab = .icon
+        toast = Toast(kind: .success, message: "Imported \(url.lastPathComponent)")
+        return true
+    }
+
+    func handleOpenURLs(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+
+        var folderURLs: [URL] = []
+        var importedStyles = 0
+        var importedIcons = 0
+        var unreadable: URL?
+
+        for url in urls {
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
+               isDirectory.boolValue {
+                folderURLs.append(url)
+                continue
+            }
+
+            let ext = url.pathExtension.lowercased()
+            if ext == PresetStore.fileExtension || ext == "json" {
+                let count = presets.importStyles(from: url)
+                if count > 0 {
+                    importedStyles += count
+                    continue
+                }
+            }
+
+            if IconImport.canImport(url), importIconFile(url) {
+                importedIcons += 1
+            } else {
+                unreadable = unreadable ?? url
+            }
+        }
+
+        if !folderURLs.isEmpty { addFolders(folderURLs) }
+
+        if importedIcons > 0 || importedStyles > 0 || !folderURLs.isEmpty {
+            var pieces: [String] = []
+            if !folderURLs.isEmpty {
+                pieces.append("\(folderURLs.count) folder\(folderURLs.count == 1 ? "" : "s")")
+            }
+            if importedIcons > 0 {
+                pieces.append("\(importedIcons) icon\(importedIcons == 1 ? "" : "s")")
+            }
+            if importedStyles > 0 {
+                pieces.append("\(importedStyles) style\(importedStyles == 1 ? "" : "s")")
+            }
+            toast = Toast(kind: .success, message: "Imported " + pieces.joined(separator: ", "))
+        } else if let unreadable {
+            toast = Toast(kind: .failure,
+                          message: "Nothing readable in that file",
+                          detail: unreadable.lastPathComponent)
+        }
+    }
 }

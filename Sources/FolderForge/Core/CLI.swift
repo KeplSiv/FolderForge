@@ -118,12 +118,15 @@ enum CLI {
             style.overlay.text = text
         }
         if let path = options["image"],
-           let data = try? Data(contentsOf: URL(fileURLWithPath: path)),
-           let image = NSImage(data: data),
-           let png = GlyphFactory.pngData(from: image) {
-            style.overlay.kind = .image
-            style.overlay.imageData = png
-            style.finish = .natural
+           let png = IconImport.pngData(from: URL(fileURLWithPath: path)) {
+            if IconImport.isICNS(URL(fileURLWithPath: path)) {
+                style.fullIconData = png
+                style.overlay.kind = .icns
+            } else {
+                style.overlay.kind = .image
+                style.overlay.imageData = png
+                style.finish = .natural
+            }
         }
         if let finish = options["finish"],
            let match = OverlayFinish(rawValue: finish) { style.finish = match }
@@ -366,6 +369,8 @@ enum CLI {
             to: URL(fileURLWithPath: out),
             folders: folders,
             selectIndex: options.int("select"),
+            inspectorTab: options["tab"].flatMap(AppState.InspectorTab.init(rawValue:)),
+            overlayKind: options["overlay"].flatMap(OverlayKind.init(rawValue:)),
             sheetPath: options["path"] ?? ""
         )
         if ok { print("Wrote \(out)") }
@@ -393,6 +398,7 @@ enum CLI {
             case .emoji: "emoji:\(style.overlay.emoji)"
             case .text: "text:\(style.overlay.text)"
             case .image: "image"
+            case .icns: "icns"
             }
             let tint = style.tintStrength < 0.01 ? "stock blue (untinted)" : style.tint.hex
             return "\(tint), \(overlay)"
@@ -477,7 +483,7 @@ enum CLI {
           --symbol <sf.symbol>    SF Symbol overlay
           --emoji <emoji>         emoji overlay
           --text <string>         text overlay
-          --image <file>          image overlay
+          --image <file>          image overlay, or full icon when the file is ICNS
           --finish <name>         engraved | tinted | natural | stamped | raised
           --base <name>           generic | documents | downloads | …
           --scale <0…1>           overlay size
