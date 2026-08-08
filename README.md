@@ -165,6 +165,13 @@ External downloaded `.icns` files apply as complete icons:
 
 ![External ICNS import](screenshots/icns-import.png)
 
+The Hollow Knight Silksong example above is an external icon from
+[macOSicons](https://macosicons.com/?icon=kVqQ3Xg6Co). FolderForge can import `.icns` files
+from your Mac; you can make your own or download premade icons from sites like
+[macOSicons](https://macosicons.com/) and [Icon-Icons](https://icon-icons.com/). Check each
+icon's license before using it, especially for commercial or redistributed work. FolderForge
+does not bundle or redistribute third-party icons.
+
 <!-- 📸 screenshots/finishes.png -->
 
 ![Finishes](screenshots/finishes.png)
