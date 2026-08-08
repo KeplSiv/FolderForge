@@ -21,6 +21,7 @@ enum UISnapshot {
                         selectIndex: Int? = nil,
                         inspectorTab: AppState.InspectorTab? = nil,
                         overlayKind: OverlayKind? = nil,
+                        iconURL: URL? = nil,
                         sheetPath: String = "") -> Bool {
         // Accessory, not regular: no Dock icon, no focus stealing. The window still gets a
         // real window-server backing store, which is what we capture from.
@@ -31,6 +32,11 @@ enum UISnapshot {
         seed(state, folders: folders, selectIndex: selectIndex)
         if let inspectorTab { state.inspectorTab = inspectorTab }
         if let overlayKind { state.style.overlay.kind = overlayKind }
+        if let iconURL, let png = IconImport.pngData(from: iconURL) {
+            state.style.fullIconData = png
+            state.style.overlay.kind = .icns
+            state.inspectorTab = .icon
+        }
 
         let root: AnyView = switch target {
         case .main: AnyView(ContentView(state: state))

@@ -159,6 +159,10 @@ files. Drag and drop an ICNS or choose one from the picker to use it as the whol
 Regular images stay as artwork on the folder canvas, with size, opacity, rotation and free
 positioning.
 
+External downloaded `.icns` files apply as complete icons:
+
+![External ICNS import](screenshots/icns-import.png)
+
 <!-- 📸 screenshots/finishes.png -->
 
 ![Finishes](screenshots/finishes.png)

@@ -371,6 +371,7 @@ enum CLI {
             selectIndex: options.int("select"),
             inspectorTab: options["tab"].flatMap(AppState.InspectorTab.init(rawValue:)),
             overlayKind: options["overlay"].flatMap(OverlayKind.init(rawValue:)),
+            iconURL: options["icon"].map { URL(fileURLWithPath: $0) },
             sheetPath: options["path"] ?? ""
         )
         if ok { print("Wrote \(out)") }
