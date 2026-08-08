@@ -131,9 +131,10 @@ plain.
 - <kbd>⌥⌘C</kbd> / <kbd>⌥⌘V</kbd> copy and paste a design between folders.
 
 > [!IMPORTANT]
-> **Icons FolderForge didn't make can't be loaded into the editor.** A custom icon on disk is
-> just a bitmap — the tint and symbol that produced it were never stored anywhere. FolderForge
-> shows you the real icon and lets you replace it, and it always archives a copy first.
+> **Icons FolderForge didn't make can't be reverse-engineered into settings.** A custom icon
+> on disk is just the final image — the tint, symbol and layout that produced it were never
+> stored anywhere. FolderForge shows you the real icon, archives a copy before replacing it,
+> and can import an external `.icns` as a complete replacement icon.
 
 ---
 
@@ -300,10 +301,11 @@ normal undo. **Undo Last Apply** is <kbd>⌥⌘Z</kbd>.
 <details>
 <summary><b>Icons FolderForge didn't make</b></summary>
 
-A custom folder icon on disk is **just a bitmap**, stored in the resource fork of a hidden
-`Icon\r` file inside the folder. The tint, symbol and finish that produced it are not recorded
-anywhere — so for any icon FolderForge didn't create, **the settings cannot be recovered**.
-There's nothing to reverse engineer; the parameters were never stored.
+A custom folder icon on disk is **just the final image**, stored in the resource fork of a
+hidden `Icon\r` file inside the folder. The tint, symbol, finish and layout that produced it
+are not recorded anywhere — so for any icon FolderForge didn't create, **the editable
+settings cannot be recovered**. External `.icns` files can still be imported as complete
+replacement icons; they just don't become tint/symbol/finish layers.
 
 | Folder state               | Sidebar badge | Preview shows                            |
 | -------------------------- | ------------- | ---------------------------------------- |
