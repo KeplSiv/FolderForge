@@ -42,7 +42,7 @@ originals.
 ## Install
 
 ```bash
-git clone <this repo> && cd Folder_Customization
+git clone https://github.com/KeplSiv/FolderForge.git && cd FolderForge
 
 ./build.sh --install     # builds and copies to /Applications
 ./build.sh --run         # builds into ./dist and launches
