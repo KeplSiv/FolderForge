@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1>
-  <img src="screenshots/logo.png" width="52" height="52" alt="FolderForge logo" align="center">
+  <img src="screenshots/app-logo.png" width="52" height="52" alt="FolderForge logo" align="center">
   FolderForge
 </h1>
 
