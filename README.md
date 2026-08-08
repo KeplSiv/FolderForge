@@ -31,7 +31,7 @@ folders — with a one-click path back to the originals.
 | [The sidebar](#the-sidebar)                           | [Command line](#command-line)                                   |
 | [Adding a whole tree](#adding-a-whole-tree)           | [Keyboard shortcuts](#keyboard-shortcuts)                       |
 | [Restore & undo](#restore--undo)                      | [Behavior & edge cases](#behavior--edge-cases)                  |
-| [How the recoloring works](#how-the-recoloring-works) | [Permissions](#permissions) · [Storage](#where-things-are-kept) |
+| [ICNS references](#icns-references)                   | [Permissions](#permissions) · [Storage](#where-things-are-kept) |
 
 ---
 
@@ -104,29 +104,30 @@ the List**.
 
 ![Add Folders sheet](screenshots/add-folders.png)
 
-The Add Folders sheet takes a path — with `~`, tab-style completion and shortcuts to Home /
-Desktop / Documents / Downloads — then asks two questions:
+The Add Folders sheet starts with a path field that supports:
 
-**How deep?** Pick an exact depth from the folder tree, or choose all levels. Plus whether
-the root itself is included, so you can style just the children of `~/Clients` and leave
-`~/Clients` alone.
+- `~` expansion
+- tab-style completion
+- shortcuts to Home, Desktop, Documents and Downloads
 
-**What to leave out?** Hidden dot-folders, bundles (`.app`, `.photoslibrary`, `.xcodeproj`),
-symlinks, and any list of shell-glob name patterns. Defaults already skip `node_modules`,
-`.git`, `Library`, `*.app` and friends.
+Then it asks:
 
-It then shows the **exact tree** it's about to add — collapsible, with the same indent guides
-as the sidebar — before you commit. A 2000-folder cap keeps a scan of `/` from running away.
+- **How deep?** Pick an exact depth from the real folder tree, or choose all levels.
+- **Include root?** Style `~/Clients` itself, or only the folders inside it.
+- **What to leave out?** Hidden folders, bundles, symlinks and shell-glob patterns.
+
+Before anything is added, FolderForge shows the exact collapsible tree it found. A 2000-folder
+cap keeps huge scans from running away.
 
 ---
 
 ## Restore & undo
 
-**Restore** puts the original icon back — the real one, not an approximation. The first time
-FolderForge touches a folder it snapshots whatever icon was already there, so a folder that
-had a custom icon before gets _that exact icon_ returned, and a plain folder goes back to
-plain.
+Restore puts the original icon back — the real one, not an approximation. The first time
+FolderForge touches a folder, it snapshots whatever icon was already there.
 
+- Folders that already had a custom icon get that exact icon back.
+- Plain folders go back to the plain system folder.
 - <kbd>⌥⌘Z</kbd> undoes the last batch apply.
 - <kbd>⌥⌘C</kbd> / <kbd>⌥⌘V</kbd> copy and paste a design between folders.
 - **Refresh Finder** nudges Finder when macOS is still showing a cached old icon.
@@ -145,32 +146,27 @@ plain.
 
 ![Inspector](screenshots/inspector.png)
 
-<details open>
-<summary><b>🎨 Color</b></summary>
+### Color
 
 Any color, or a two-color gradient at any angle. 60+ curated swatches and 10 gradient
 presets. Tint strength blends back toward the stock macOS blue.
 
-</details>
+### Icon — 300+ SF Symbols, emoji, text, images or custom ICNS
 
-<details open>
-<summary><b>⭐️ Icon — 300+ SF Symbols, emoji, text, images or custom ICNS</b></summary>
+Choose from:
 
-Searchable symbol browser by category, plus emoji, short text, images, or custom `.icns`
-files. Drag and drop an ICNS or choose one from the picker to use it as the whole folder icon.
-Regular images stay as artwork on the folder canvas, with size, opacity, rotation and free
-positioning.
+- searchable SF Symbols
+- emoji
+- short text
+- regular images placed on the folder canvas
+- custom `.icns` files used as the whole folder icon
+
+Images can be sized, faded, rotated and positioned freely. ICNS files stay complete: they
+replace the folder icon instead of becoming an overlay.
 
 External downloaded `.icns` files apply as complete icons:
 
 ![External ICNS import](screenshots/icns-import.png)
-
-The Hollow Knight Silksong example above is an external icon from
-[macOSicons](https://macosicons.com/?icon=kVqQ3Xg6Co). FolderForge can import `.icns` files
-from your Mac; you can make your own or download premade icons from sites like
-[macOSicons](https://macosicons.com/) and [Icon-Icons](https://icon-icons.com/). Check each
-icon's license before using it, especially for commercial or redistributed work. FolderForge
-does not bundle or redistribute third-party icons.
 
 <!-- 📸 screenshots/finishes.png -->
 
@@ -188,51 +184,54 @@ Emoji and images carry their own colors, so picking one switches the finish to *
 automatically — a masked finish would flatten them to white silhouettes. ICNS files are
 applied as complete icons. Switching back to a symbol restores **Engraved**.
 
-</details>
-
-<details>
-<summary><b>🎚️ Tune</b></summary>
+### Tune
 
 Saturation, brightness, contrast, and five one-click looks: Vintage, Punchy, Pastel, Noir,
 Neon.
 
-</details>
-
-<details>
-<summary><b>📐 Shape</b></summary>
+### Shape
 
 Start from any of the 15 stock macOS folder shapes, not just the plain one.
 
-</details>
-
-<details>
-<summary><b>💾 Presets</b></summary>
+### Presets
 
 Save anything you like as a preset. Presets export as `.folderstyle` files you can share, and
 double-clicking one imports it.
 
-</details>
+---
+
+## ICNS references
+
+FolderForge can import `.icns` files from your Mac. Good places to find or make icons:
+
+- Create your own `.icns` files.
+- Browse [macOSicons](https://macosicons.com/).
+- Browse [Icon-Icons](https://icon-icons.com/).
+
+Notes:
+
+- The Hollow Knight Silksong example in this README uses an external icon from
+  [macOSicons](https://macosicons.com/?icon=kVqQ3Xg6Co).
+- Check each icon's license before using it, especially for commercial or redistributed work.
+- FolderForge does not bundle or redistribute third-party icons.
 
 ---
 
 ## How the recoloring works
 
-<details>
-<summary><b>Why the results look native instead of painted</b></summary>
+### Why the results look native instead of painted
 
-The stock macOS folder art is recolored with a `.color` blend, which replaces hue and
-saturation while keeping the original luminosity — so every gradient, highlight and drop
-shadow in Apple's artwork survives intact.
+FolderForge keeps the native macOS folder look by preserving the original artwork's lighting.
 
-A `.color` blend alone can't make a folder darker or lighter, so a second pass matches the
-folder's **HSB brightness** to the tint. Deliberately HSB brightness and not perceived
-luminance: a fully saturated red has a luminance of 0.21, so matching luminance would render
-`#FF375F` as a nearly black folder — which is not what anyone means when they pick that color.
+- A `.color` blend replaces hue and saturation while keeping Apple's gradients, highlights and
+  shadows intact.
+- A second pass matches **HSB brightness** to the chosen tint, so very dark or pale colors land
+  as expected.
+- Icons render separately at 16, 32, 64, 128, 256, 512 and 1024 px, so small Finder sizes stay
+  crisp.
 
-Icons are rendered separately at 16, 32, 64, 128, 256, 512 and 1024 px rather than
-downsampled from one master, so the glyph stays legible in Finder's list view.
-
-</details>
+HSB brightness is deliberate. Perceived luminance would make saturated colors like `#FF375F`
+look much darker than people expect.
 
 ---
 
@@ -266,21 +265,16 @@ $FF --help
 
 Every style flag from `--help` works with `--apply`, `--export` and `--iconset`.
 
-<details>
-<summary><b>Development aids (hidden, not in <code>--help</code>)</b></summary>
+### Development aids
 
 ```bash
 FolderForge --ui-snapshot out.png --width 900 --height 620 [--view main|sheet] [--tab color|icon|tune] [--overlay icns] [--icon file.icns]
 FolderForge --debug-selection <folder...>
 ```
 
-`--ui-snapshot` renders the interface at an exact size by ordering a real window far offscreen
-and capturing its backing store — so layout can be checked at any size, including sizes larger
-than the display. It needs an unlocked screen: the window server won't composite while the Mac
-is locked. `--debug-selection` prints what the editor adopts as the selection moves, and needs
-no screen at all.
-
-</details>
+- `--ui-snapshot` renders the interface at an exact size using a real offscreen window.
+- It needs an unlocked screen because the window server will not composite while the Mac is locked.
+- `--debug-selection` prints what the editor adopts as the selection moves and needs no screen.
 
 ---
 
@@ -306,14 +300,15 @@ normal undo. **Undo Last Apply** is <kbd>⌥⌘Z</kbd>.
 
 ## Behavior & edge cases
 
-<details>
-<summary><b>Icons FolderForge didn't make</b></summary>
+### Icons FolderForge didn't make
 
 A custom folder icon on disk is **just the final image**, stored in the resource fork of a
-hidden `Icon\r` file inside the folder. The tint, symbol, finish and layout that produced it
-are not recorded anywhere — so for any icon FolderForge didn't create, **the editable
-settings cannot be recovered**. External `.icns` files can still be imported as complete
-replacement icons; they just don't become tint/symbol/finish layers.
+hidden `Icon\r` file inside the folder.
+
+- Tint, symbol, finish and layout settings are not recorded by macOS.
+- FolderForge can show and archive the real icon.
+- FolderForge cannot recover editable settings from an icon it did not create.
+- External `.icns` files can still be imported as complete replacement icons.
 
 | Folder state               | Sidebar badge | Preview shows                            |
 | -------------------------- | ------------- | ---------------------------------------- |
@@ -324,10 +319,7 @@ replacement icons; they just don't become tint/symbol/finish layers.
 The preview switches to your design the moment you change anything, so an existing icon never
 gets in the way.
 
-</details>
-
-<details>
-<summary><b>Nothing destroys an icon without a copy first</b></summary>
+### Nothing destroys an icon without a copy first
 
 - **`OriginalIcons/`** — before the first change to a folder, whatever icon was there is
   snapshotted. **Restore** puts that exact icon back. Folders that had no custom icon get a
@@ -338,46 +330,35 @@ gets in the way.
   icon FolderForge generated is fully reproducible from the style in the ledger, so copying it
   on every reset would burn megabytes for nothing.
 
-A failed restore **keeps** its snapshot and reports an error rather than clearing the folder.
+A failed restore keeps its snapshot and reports an error rather than clearing the folder.
 
-Snapshots are LZW-compressed TIFFs keeping every representation bit-for-bit — ~8 MB for an
-elaborate icon, far less for a normal one. They only exist for folders that already had a
-custom icon, which is rare. Snapshots for folders since deleted or moved are pruned at launch
-and on demand via Settings → **Clean Up Snapshots for Deleted Folders**. Pruning is
-conservative: it only drops entries whose recorded path is gone, and never touches a snapshot
-file that has no ledger entry.
+- Stored as LZW-compressed TIFFs, preserving every icon representation.
+- Around 8 MB for an elaborate icon; far less for a normal one.
+- Created only for folders that already had custom icons.
+- Pruned at launch and via Settings → **Clean Up Snapshots for Deleted Folders**.
+- Pruning only drops entries whose recorded path is gone.
 
-</details>
+### Selection drives the editor
 
-<details>
-<summary><b>Selection drives the editor</b></summary>
+Selecting a folder loads whatever that folder is:
 
-Selecting a folder loads whatever that folder _is_: a saved design loads into the editor, a
-plain folder shows plain, and a **mixed** selection leaves the design alone — there's no single
-truth to show.
+- Saved FolderForge design: loads into the editor.
+- Plain folder: shows a plain folder.
+- Mixed selection: leaves the current design alone because there is no single design to show.
 
-Unsaved work is never silently discarded. If you're mid-design and select a folder that has a
-saved style, your design is put on the style clipboard and a toast tells you to press
-<kbd>⌥⌘V</kbd>. And ⌘-clicking a _second plain folder_ onto the selection deliberately does
-**not** reset the editor — that's how you apply one design to several folders at once.
+Unsaved work is never silently discarded. If a selection change would replace your current
+design, FolderForge puts it on the style clipboard and tells you to press <kbd>⌥⌘V</kbd> to
+bring it back.
 
-</details>
+### Apply and Restore with nothing selected
 
-<details>
-<summary><b>Apply and Restore with nothing selected</b></summary>
+When nothing is selected, Apply and Restore target every folder in the list.
 
-Both fall back to "every folder in the list". That's convenient for two folders and alarming
-for two hundred, so when nothing is selected and the list holds more than one folder, you get a
-confirmation naming the count.
+- If the list has more than one folder, FolderForge asks for confirmation first.
+- Batches run asynchronously, so the progress bar can draw and **Stop** works.
+- Large batches yield between folders instead of freezing the app.
 
-Batches run asynchronously and yield between folders, so the progress bar actually draws and
-**Stop** works. Run synchronously, a 2000-folder batch would block the main run loop start to
-finish and the app would look hung.
-
-</details>
-
-<details>
-<summary><b>Scanning rules</b></summary>
+### Scanning rules
 
 - The scan runs off the main thread, debounced ~200 ms. Typing a single `/` with "All levels"
   selected walks the entire disk; doing that synchronously on every keystroke froze the window.
@@ -393,19 +374,13 @@ finish and the app would look hung.
 - The root folder you name is always included regardless of exclusion patterns — you asked for
   it explicitly. Use `--no-root` to leave it out.
 
-</details>
-
-<details>
-<summary><b>Paths</b></summary>
+### Paths
 
 `~` expands. A bare relative path is tried against the working directory first (what you'd
 expect from the CLI) and then against home (what you'd expect typing `Projects` into the app).
 Quoted and backslash-escaped paths pasted from a terminal are accepted.
 
-</details>
-
-<details>
-<summary><b>Known limits</b></summary>
+### Known limits
 
 - Settings can't be recovered from an existing icon FolderForge didn't make.
 - Icons are re-rendered at each size (16 → 1024), but the stock artwork being recolored tops out
@@ -414,18 +389,17 @@ Quoted and backslash-escaped paths pasted from a terminal are accepted.
   aren't exposed.
 - Ad-hoc signed, not notarized — a downloaded copy needs right-click → **Open** once.
 
-</details>
-
 ---
 
 ## Permissions
 
-Setting a folder icon means writing _inside_ that folder, so macOS asks for access the first
-time you touch something in Desktop, Documents or Downloads. Grant it in
-**System Settings › Privacy & Security › Files and Folders**.
+FolderForge may trigger two macOS permission prompts:
 
-Reading the Finder selection (<kbd>⇧⌘O</kbd>) goes through Apple Events and prompts separately,
-under **Privacy & Security › Automation**. Everything else works without it.
+- **Files and Folders** — needed to write custom icons inside Desktop, Documents or Downloads.
+- **Automation** — needed only for reading the current Finder selection with <kbd>⇧⌘O</kbd>.
+
+Grant them in **System Settings › Privacy & Security**. Everything else works without Finder
+Automation access.
 
 ---
 
@@ -439,8 +413,13 @@ under **Privacy & Security › Automation**. Everything else works without it.
   RemovedIcons/     foreign icons that were cleared
 ```
 
-Deleting that directory loses your presets and the ability to restore exact original icons.
-Folders themselves are unaffected; **Restore** falls back to the plain system folder.
+Deleting that directory:
+
+- removes saved presets
+- removes exact original-icon snapshots
+- does not damage folders themselves
+
+Without the snapshot ledger, **Restore** falls back to the plain system folder.
 
 ---
 
@@ -457,13 +436,12 @@ build.sh      Produces dist/FolderForge.app
 screenshots/  Images used by this README
 ```
 
-The app icon is rendered from `Resources/AppIcon.svg` at build time, once per iconset size
-straight from the vector instead of downsampled from a single master, so 16 and 32 px stay
-crisp. Edit the SVG and re-run `./build.sh` to change it.
+Notes for contributors:
 
-`Core/IconRenderer.swift` has no UI dependencies and is driven entirely by a `FolderStyle`
-value — which is why the CLI, the live previews and the applied icons can't drift apart. They
-all call the same function.
+- The app icon is rendered from `Resources/AppIcon.svg` at build time, once per iconset size.
+- Edit the SVG and re-run `./build.sh` to change the app icon.
+- `Core/IconRenderer.swift` has no UI dependencies and is driven by `FolderStyle`.
+- The CLI, live previews and applied icons all call the same renderer, so they stay in sync.
 
 <div align="center">
 
