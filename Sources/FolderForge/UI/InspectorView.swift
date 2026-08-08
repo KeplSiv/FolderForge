@@ -5,6 +5,10 @@ import UniformTypeIdentifiers
 struct InspectorView: View {
     @Bindable var state: AppState
 
+    private var locksCurrentTab: Bool {
+        state.style.fill.kind == .icns && state.style.fill.fullIconData != nil && state.inspectorTab != .fill
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $state.inspectorTab) {
@@ -20,10 +24,15 @@ struct InspectorView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    switch state.inspectorTab {
-                    case .color: ColorTab(style: $state.style)
-                    case .icon: IconTab(state: state)
-                    case .tune: TuneTab(style: $state.style)
+                    if locksCurrentTab {
+                        LockedForICNSView(tab: state.inspectorTab)
+                    } else {
+                        switch state.inspectorTab {
+                        case .color: ColorTab(style: $state.style)
+                        case .fill: FillTab(state: state)
+                        case .icon: IconTab(state: state)
+                        case .tune: TuneTab(style: $state.style)
+                        }
                     }
                 }
                 .padding(14)
@@ -33,6 +42,27 @@ struct InspectorView: View {
         // Width is owned by the split view column, not hard-coded here — otherwise the
         // inspector gets clipped instead of resized when the window is narrow.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct LockedForICNSView: View {
+    var tab: AppState.InspectorTab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "\(tab.title) Disabled", symbol: "lock.fill")
+            Text("ICNS fill replaces the entire folder icon, so color, overlays and tuning do not apply.")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Switch Fill back to Color or Image to use the other tabs.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.32), in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -120,6 +150,286 @@ private struct ColorTab: View {
     }
 }
 
+// MARK: - Fill
+
+private struct FillTab: View {
+    @Bindable var state: AppState
+    @State private var dropTargeted = false
+    @State private var dragStartOffset: CGPoint?
+
+    private var style: Binding<FolderStyle> { $state.style }
+
+    private enum ImagePlacementMode: String, CaseIterable, Identifiable {
+        case fit, fill
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .fit: "Fit"
+            case .fill: "Fill"
+            }
+        }
+    }
+
+    private var imagePlacementMode: Binding<ImagePlacementMode> {
+        Binding {
+            state.style.fillScale < 0.95 ? .fit : .fill
+        } set: { mode in
+            switch mode {
+            case .fit: setImagePlacement(scale: 0.72)
+            case .fill: setImagePlacement(scale: 1.0)
+            }
+        }
+    }
+
+    var body: some View {
+        SectionLabel(text: "Fill", symbol: "rectangle.on.rectangle")
+        Picker("", selection: style.fill.kind) {
+            ForEach(FillKind.allCases) { kind in
+                Text(kind.title).tag(kind)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .onChange(of: state.style.fill.kind) { _, kind in
+            switch kind {
+            case .color:
+                state.style.fill.imageData = nil
+                state.style.fill.fullIconData = nil
+            case .image:
+                state.style.fill.fullIconData = nil
+            case .icns:
+                state.style.fill.imageData = nil
+            }
+        }
+
+        switch state.style.fill.kind {
+        case .color:
+            Text("Uses the color and gradient from the Color tab.")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+
+        case .image:
+            imageWell
+            Divider()
+            imagePlacementControls
+
+        case .icns:
+            importedFullIconWell
+        }
+    }
+
+    private var imageWell: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.quaternary.opacity(0.4))
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(
+                        dropTargeted ? Color.accentColor : Color.secondary.opacity(0.35),
+                        style: StrokeStyle(lineWidth: dropTargeted ? 2 : 1, dash: [5, 3])
+                    )
+
+                if state.style.fill.imageData != nil {
+                    GeometryReader { geometry in
+                        FolderIconView(style: state.style, side: 96)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .contentShape(Rectangle())
+                            .gesture(imageDragGesture(in: geometry.size))
+                    }
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Drop an image")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text("PNG or JPG fills the folder face")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .frame(height: 120)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                return loadFill(from: url)
+            } isTargeted: { dropTargeted = $0 }
+
+            HStack(spacing: 6) {
+                Button("Choose…") { chooseFill() }
+                if state.style.fill.imageData != nil {
+                    Button("Clear") {
+                        state.style.fill.kind = .color
+                        state.style.fill.imageData = nil
+                    }
+                }
+            }
+            .controlSize(.small)
+        }
+    }
+
+    private var importedFullIconWell: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Imported ICNS", symbol: "app.dashed")
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.quaternary.opacity(0.4))
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(
+                        dropTargeted ? Color.accentColor : Color.secondary.opacity(0.35),
+                        style: StrokeStyle(lineWidth: dropTargeted ? 2 : 1, dash: [5, 3])
+                    )
+
+                if let data = state.style.fill.fullIconData, let image = NSImage(data: data) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(10)
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: "app.dashed")
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Drop an ICNS")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text("Replaces the whole folder icon")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .frame(height: 140)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                return loadFill(from: url)
+            } isTargeted: { dropTargeted = $0 }
+
+            Text("ICNS fills replace the whole folder. Symbols, emoji and text overlays stay available for image fills.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+
+            HStack(spacing: 6) {
+                Button("Choose…") { chooseFill() }
+            }
+            .controlSize(.small)
+        }
+    }
+
+    private var imagePlacementControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Image Placement", symbol: "move.3d")
+            Picker("", selection: imagePlacementMode) {
+                ForEach(ImagePlacementMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .controlSize(.small)
+
+            LabeledSlider(title: "Size", value: style.fillScale,
+                          range: 0.15...2.4, defaultValue: 1.0,
+                          format: "%.0f%%",
+                          symbol: "arrow.up.left.and.arrow.down.right", displayScale: 100)
+            LabeledSlider(title: "Opacity", value: style.fillOpacity,
+                          range: 0...1, defaultValue: 1.0,
+                          format: "%.0f%%",
+                          symbol: "circle.lefthalf.filled", displayScale: 100)
+            LabeledSlider(title: "Horizontal", value: style.fillOffsetX,
+                          range: -0.3...0.3, defaultValue: 0, format: "%+.2f",
+                          symbol: "arrow.left.and.right")
+            LabeledSlider(title: "Vertical", value: style.fillOffsetY,
+                          range: -0.3...0.3, defaultValue: 0, format: "%+.2f",
+                          symbol: "arrow.up.and.down")
+            Button {
+                setImagePlacement(scale: 1.0)
+            } label: {
+                Label("Reset Image Placement", systemImage: "arrow.counterclockwise")
+            }
+            .controlSize(.small)
+            .buttonStyle(.bordered)
+        }
+    }
+
+    @discardableResult
+    private func loadFill(from url: URL) -> Bool {
+        let isICNS = IconImport.isICNS(url)
+        switch state.style.fill.kind {
+        case .color:
+            state.toast = Toast(kind: .failure, message: "Choose Image or ICNS first")
+            return false
+        case .image where isICNS:
+            state.toast = Toast(kind: .failure, message: "Image fill only accepts image files")
+            return false
+        case .icns where !isICNS:
+            state.toast = Toast(kind: .failure, message: "ICNS fill only accepts .icns files")
+            return false
+        default:
+            break
+        }
+
+        guard let png = IconImport.pngData(from: url) else {
+            state.toast = Toast(kind: .failure, message: "Couldn't read that file")
+            return false
+        }
+
+        if isICNS {
+            state.style.fill.kind = .icns
+            state.style.fill.fullIconData = png
+            state.style.fill.imageData = nil
+        } else {
+            state.style.fill.kind = .image
+            state.style.fill.imageData = png
+            state.style.fill.fullIconData = nil
+            setImagePlacement(scale: 1.0)
+        }
+        state.toast = Toast(kind: .success, message: "Imported \(url.lastPathComponent)")
+        return true
+    }
+
+    private func chooseFill() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = switch state.style.fill.kind {
+        case .image: IconImport.imageContentTypes
+        case .icns: [IconImport.icnsType]
+        case .color: IconImport.allowedContentTypes
+        }
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        loadFill(from: url)
+    }
+
+    private func setImagePlacement(scale: Double) {
+        state.style.fillScale = scale
+        state.style.fillOpacity = 1.0
+        state.style.fillOffsetX = 0
+        state.style.fillOffsetY = 0
+        state.style.fillRotation = 0
+    }
+
+    private func imageDragGesture(in size: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if dragStartOffset == nil {
+                    dragStartOffset = CGPoint(x: state.style.fillOffsetX,
+                                              y: state.style.fillOffsetY)
+                }
+                let base = dragStartOffset ?? .zero
+                let divisor = max(min(size.width, size.height), 1)
+                state.style.fillOffsetX = clamp(Double(base.x + value.translation.width / divisor))
+                state.style.fillOffsetY = clamp(Double(base.y - value.translation.height / divisor))
+            }
+            .onEnded { _ in dragStartOffset = nil }
+    }
+
+    private func clamp(_ value: Double) -> Double {
+        min(0.3, max(-0.3, value))
+    }
+}
+
 // MARK: - Icon
 
 private struct IconTab: View {
@@ -129,6 +439,7 @@ private struct IconTab: View {
     @State private var dragStartOffset: CGPoint?
 
     private var style: Binding<FolderStyle> { $state.style }
+    private let overlayKinds: [OverlayKind] = [.none, .symbol, .emoji, .text]
 
     private enum ImagePlacementMode: String, CaseIterable, Identifiable {
         case fit, fill
@@ -155,26 +466,20 @@ private struct IconTab: View {
     var body: some View {
         SectionLabel(text: "Overlay", symbol: "star")
         Picker("", selection: style.overlay.kind) {
-            ForEach(OverlayKind.allCases) { kind in
+            ForEach(overlayKinds) { kind in
                 Text(kind.title).tag(kind)
             }
         }
         .pickerStyle(.segmented)
         .labelsHidden()
         .onChange(of: state.style.overlay.kind) { _, kind in
-            // Emoji and images carry their own colors. Leaving a masked finish selected
-            // turns them into a flat white silhouette, which nobody is asking for.
             switch kind {
-            case .emoji, .image:
-                state.style.fullIconData = nil
+            case .emoji:
                 if state.style.finish.isMasked { state.style.finish = .natural }
             case .symbol, .text:
-                state.style.fullIconData = nil
                 if state.style.finish == .natural { state.style.finish = .engraved }
-            case .none:
-                state.style.fullIconData = nil
-            case .icns:
-                state.style.overlay.imageData = nil
+            case .none, .image, .icns:
+                break
             }
         }
 
@@ -232,69 +537,56 @@ private struct IconTab: View {
             }
             .controlSize(.small)
 
-        case .image:
-            imageWell
-
-        case .icns:
-            importedFullIconWell
+        case .image, .icns:
+            Text("Images and ICNS imports now live in the Fill tab.")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
         }
 
-        if state.style.overlay.kind != .none && state.style.overlay.kind != .icns {
+        if overlayKinds.contains(state.style.overlay.kind), state.style.overlay.kind != .none {
             Divider()
 
-            if state.style.overlay.kind != .image {
-                SectionLabel(text: "Finish", symbol: "paintbrush")
-                Picker("", selection: style.finish) {
-                    ForEach(OverlayFinish.allCases) { finish in
-                        Text(finish.title).tag(finish)
-                    }
+            SectionLabel(text: "Finish", symbol: "paintbrush")
+            Picker("", selection: style.finish) {
+                ForEach(OverlayFinish.allCases) { finish in
+                    Text(finish.title).tag(finish)
                 }
-                .labelsHidden()
-                Text(state.style.finish.help)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if state.style.finish.isMasked {
-                    TintWell(color: style.overlayColor, label: "Ink")
-                    HStack(spacing: 6) {
-                        Button("White") { state.style.overlayColor = .white }
-                        Button("Black") { state.style.overlayColor = .black }
-                        Button("Folder Tint") { state.style.overlayColor = state.style.tint }
-                    }
-                    .controlSize(.small)
-                    .buttonStyle(.bordered)
-                }
-
-                Toggle(isOn: style.overlayShadow) {
-                    Text("Drop shadow").font(.system(size: 12))
-                }
-                .toggleStyle(.switch)
-                .controlSize(.mini)
-                .disabled(state.style.finish == .stamped)
-
-                Divider()
             }
+            .labelsHidden()
+            Text(state.style.finish.help)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if state.style.finish.isMasked {
+                TintWell(color: style.overlayColor, label: "Ink")
+                HStack(spacing: 6) {
+                    Button("White") { state.style.overlayColor = .white }
+                    Button("Black") { state.style.overlayColor = .black }
+                    Button("Folder Tint") { state.style.overlayColor = state.style.tint }
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
+            }
+
+            Toggle(isOn: style.overlayShadow) {
+                Text("Drop shadow").font(.system(size: 12))
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .disabled(state.style.finish == .stamped)
+
+            Divider()
 
             SectionLabel(text: "Placement", symbol: "move.3d")
-            if state.style.overlay.kind == .image {
-                Picker("", selection: imagePlacementMode) {
-                    ForEach(ImagePlacementMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.small)
-            }
             LabeledSlider(title: "Size", value: style.overlayScale,
-                          range: state.style.overlay.kind == .image ? 0.15...2.4 : 0.15...0.75,
-                          defaultValue: state.style.overlay.kind == .image ? 1.0 : 0.42,
+                          range: 0.15...0.75,
+                          defaultValue: 0.42,
                           format: "%.0f%%",
                           symbol: "arrow.up.left.and.arrow.down.right", displayScale: 100)
             LabeledSlider(title: "Opacity", value: style.overlayOpacity,
                           range: 0...1,
-                          defaultValue: state.style.overlay.kind == .image ? 1.0 : 0.92,
+                          defaultValue: 0.92,
                           format: "%.0f%%",
                           symbol: "circle.lefthalf.filled", displayScale: 100)
             LabeledSlider(title: "Horizontal", value: style.overlayOffsetX,
@@ -303,20 +595,9 @@ private struct IconTab: View {
             LabeledSlider(title: "Vertical", value: style.overlayOffsetY,
                           range: -0.3...0.3, defaultValue: 0, format: "%+.2f",
                           symbol: "arrow.up.and.down")
-            if state.style.overlay.kind != .image {
-                LabeledSlider(title: "Rotation", value: style.overlayRotation,
-                              range: -180...180, defaultValue: 0, format: "%.0f°",
-                              symbol: "rotate.right")
-            }
-            if state.style.overlay.kind == .image {
-                Button {
-                    setImagePlacement(scale: 1.0)
-                } label: {
-                    Label("Reset Image Placement", systemImage: "arrow.counterclockwise")
-                }
-                .controlSize(.small)
-                .buttonStyle(.bordered)
-            }
+            LabeledSlider(title: "Rotation", value: style.overlayRotation,
+                          range: -180...180, defaultValue: 0, format: "%.0f°",
+                          symbol: "rotate.right")
         }
     }
 
@@ -364,10 +645,6 @@ private struct IconTab: View {
 
             HStack(spacing: 6) {
                 Button("Choose…") { chooseImage() }
-                Button("Use Folder Canvas") {
-                    state.style.fullIconData = nil
-                    state.style.overlay.kind = .none
-                }
             }
             .controlSize(.small)
         }

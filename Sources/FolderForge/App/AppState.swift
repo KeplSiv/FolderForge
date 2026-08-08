@@ -62,11 +62,12 @@ final class AppState {
     var showingSettings = false
 
     enum InspectorTab: String, CaseIterable, Identifiable {
-        case color, icon, tune
+        case color, fill, icon, tune
         var id: String { rawValue }
         var title: String {
             switch self {
             case .color: "Color"
+            case .fill: "Fill"
             case .icon: "Icon"
             case .tune: "Tune"
             }
@@ -74,6 +75,7 @@ final class AppState {
         var symbol: String {
             switch self {
             case .color: "paintpalette"
+            case .fill: "rectangle.on.rectangle"
             case .icon: "star"
             case .tune: "slider.horizontal.3"
             }
@@ -703,21 +705,20 @@ final class AppState {
             return false
         }
         if IconImport.isICNS(url) {
-            style.fullIconData = png
-            style.overlay.kind = .icns
-            style.overlay.imageData = nil
+            style.fill.kind = .icns
+            style.fill.fullIconData = png
+            style.fill.imageData = nil
         } else {
-            style.fullIconData = nil
-            style.overlay.kind = .image
-            style.overlay.imageData = png
-            style.overlayScale = 1.0
-            style.overlayOpacity = 1.0
-            style.overlayOffsetX = 0
-            style.overlayOffsetY = 0
-            style.overlayRotation = 0
-            if style.finish.isMasked { style.finish = .natural }
+            style.fill.kind = .image
+            style.fill.imageData = png
+            style.fill.fullIconData = nil
+            style.fillScale = 1.0
+            style.fillOpacity = 1.0
+            style.fillOffsetX = 0
+            style.fillOffsetY = 0
+            style.fillRotation = 0
         }
-        inspectorTab = .icon
+        inspectorTab = .fill
         toast = Toast(kind: .success, message: "Imported \(url.lastPathComponent)")
         return true
     }

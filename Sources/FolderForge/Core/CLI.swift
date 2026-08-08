@@ -120,14 +120,15 @@ enum CLI {
         if let path = options["image"],
            let png = IconImport.pngData(from: URL(fileURLWithPath: path)) {
             if IconImport.isICNS(URL(fileURLWithPath: path)) {
-                style.fullIconData = png
-                style.overlay.kind = .icns
+                style.fill.kind = .icns
+                style.fill.fullIconData = png
+                style.fill.imageData = nil
             } else {
-                style.overlay.kind = .image
-                style.overlay.imageData = png
-                style.overlayScale = 1.0
-                style.overlayOpacity = 1.0
-                style.finish = .natural
+                style.fill.kind = .image
+                style.fill.imageData = png
+                style.fill.fullIconData = nil
+                style.fillScale = 1.0
+                style.fillOpacity = 1.0
             }
         }
         if let finish = options["finish"],
@@ -364,6 +365,14 @@ enum CLI {
         let folders = (options["folders"] ?? "")
             .split(separator: ",")
             .compactMap { FolderScanner.resolve(path: String($0)) }
+        let styleKeys: Set<String> = [
+            "preset", "style", "color", "color2", "angle", "symbol", "emoji", "text",
+            "image", "finish", "base", "scale", "opacity", "saturation", "brightness",
+            "contrast",
+        ]
+        let styleOverride = options.flags.keys.contains { styleKeys.contains($0) }
+            ? style(from: options)
+            : nil
         let ok = UISnapshot.capture(
             target: target,
             width: options.int("width") ?? 1080,
@@ -373,6 +382,7 @@ enum CLI {
             selectIndex: options.int("select"),
             inspectorTab: options["tab"].flatMap(AppState.InspectorTab.init(rawValue:)),
             overlayKind: options["overlay"].flatMap(OverlayKind.init(rawValue:)),
+            styleOverride: styleOverride,
             iconURL: options["icon"].map { URL(fileURLWithPath: $0) },
             sheetPath: options["path"] ?? ""
         )

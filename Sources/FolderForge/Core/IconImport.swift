@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 /// Normalizes artwork the user brings in from outside FolderForge.
 enum IconImport {
     static let icnsType = UTType(filenameExtension: "icns") ?? .data
+    static let imageContentTypes: [UTType] = [.image]
     static let allowedContentTypes: [UTType] = [.image, icnsType]
 
     static func canImport(_ url: URL) -> Bool {

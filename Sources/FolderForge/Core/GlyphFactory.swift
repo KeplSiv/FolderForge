@@ -19,11 +19,7 @@ enum GlyphFactory {
             let weight = style.symbolWeight.nsWeight
             let font = NSFont.systemFont(ofSize: CGFloat(side) * 0.6, weight: weight)
             return text(style.overlay.text, side: side, font: font)
-        case .image:
-            guard let data = style.overlay.imageData,
-                  let image = NSImage(data: data) else { return nil }
-            return rasterizeFitting(image, side: side)
-        case .icns:
+        case .image, .icns:
             return nil
         }
     }

@@ -124,6 +124,30 @@ enum OverlayKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - Fill
+
+/// What occupies the folder face before any symbol, emoji or text overlay is added.
+enum FillKind: String, Codable, CaseIterable, Identifiable {
+    case color, image, icns
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .color: "Color"
+        case .image: "Image"
+        case .icns: "ICNS"
+        }
+    }
+}
+
+struct FolderFill: Codable, Hashable {
+    var kind: FillKind = .color
+    /// PNG bytes embedded from a PNG/JPG import. These become the folder face.
+    var imageData: Data?
+    /// PNG bytes rasterized from an imported ICNS. These replace the whole folder icon.
+    var fullIconData: Data?
+}
+
 /// How the overlay art is fused into the folder face.
 enum OverlayFinish: String, Codable, CaseIterable, Identifiable {
     /// Carved into the folder — tone-on-tone, feels like part of the icon. (Apple's own look.)
@@ -218,8 +242,15 @@ struct FolderStyle: Codable, Hashable, Identifiable {
     var brightness: Double = 0.0            // -0.35…0.35
     var contrast: Double = 1.0              // 0.6…1.6
 
-    /// Full replacement icon bytes, used for imported `.icns` artwork. When this is set,
-    /// FolderForge applies these pixels as the folder icon instead of composing a stock folder.
+    // Fill
+    var fill = FolderFill()
+    var fillScale: Double = 1.0
+    var fillOpacity: Double = 1.0
+    var fillOffsetX: Double = 0.0
+    var fillOffsetY: Double = 0.0
+    var fillRotation: Double = 0.0
+
+    /// Legacy location for imported `.icns` artwork. New styles use `fill.fullIconData`.
     var fullIconData: Data?
 
     // Overlay
@@ -287,6 +318,12 @@ struct FolderStyle: Codable, Hashable, Identifiable {
         saturation = value(.saturation, blank.saturation)
         brightness = value(.brightness, blank.brightness)
         contrast = value(.contrast, blank.contrast)
+        fill = value(.fill, blank.fill)
+        fillScale = value(.fillScale, blank.fillScale)
+        fillOpacity = value(.fillOpacity, blank.fillOpacity)
+        fillOffsetX = value(.fillOffsetX, blank.fillOffsetX)
+        fillOffsetY = value(.fillOffsetY, blank.fillOffsetY)
+        fillRotation = value(.fillRotation, blank.fillRotation)
         fullIconData = (try? container.decodeIfPresent(Data.self, forKey: .fullIconData)) ?? nil
         overlay = value(.overlay, blank.overlay)
         finish = value(.finish, blank.finish)
@@ -298,6 +335,34 @@ struct FolderStyle: Codable, Hashable, Identifiable {
         overlayRotation = value(.overlayRotation, blank.overlayRotation)
         overlayShadow = value(.overlayShadow, blank.overlayShadow)
         symbolWeight = value(.symbolWeight, blank.symbolWeight)
+
+        migrateLegacyArtworkIntoFill()
+    }
+
+    private mutating func migrateLegacyArtworkIntoFill() {
+        guard fill.kind == .color else { return }
+
+        if let fullIconData {
+            fill.kind = .icns
+            fill.fullIconData = fullIconData
+            self.fullIconData = nil
+            if overlay.kind == .icns { overlay.kind = .none }
+            return
+        }
+
+        if overlay.kind == .image, let imageData = overlay.imageData {
+            fill.kind = .image
+            fill.imageData = imageData
+            fillScale = overlayScale
+            fillOpacity = overlayOpacity
+            fillOffsetX = overlayOffsetX
+            fillOffsetY = overlayOffsetY
+            fillRotation = overlayRotation
+            overlay.kind = .none
+            overlay.imageData = nil
+        } else if overlay.kind == .icns {
+            overlay.kind = .none
+        }
     }
 
     /// Equality that ignores identity — used to detect "is this still the preset I loaded?"

@@ -23,7 +23,9 @@ enum IconRenderer {
     // MARK: - Public
 
     static func render(_ style: FolderStyle, pixels: Int) -> CGImage? {
-        if let data = style.fullIconData, let image = NSImage(data: data) {
+        if style.fill.kind == .icns,
+           let data = style.fill.fullIconData,
+           let image = NSImage(data: data) {
             return GlyphFactory.rasterizeFitting(image, side: pixels)
         }
 
@@ -31,12 +33,15 @@ enum IconRenderer {
 
         let colored = recolor(base: base, style: style, pixels: pixels) ?? base
         let toned = applyTone(colored, style: style) ?? colored
-
-        guard !style.overlay.isEmpty, style.overlay.kind != .none else { return toned }
-        if style.overlay.kind == .image {
-            return compositeImageArtwork(style: style, onto: toned, mask: base, pixels: pixels) ?? toned
+        let filled: CGImage
+        if style.fill.kind == .image {
+            filled = compositeImageArtwork(style: style, onto: toned, mask: base, pixels: pixels) ?? toned
+        } else {
+            filled = toned
         }
-        return composite(overlay: style, onto: toned, pixels: pixels) ?? toned
+
+        guard !style.overlay.isEmpty, style.overlay.kind != .none else { return filled }
+        return composite(overlay: style, onto: filled, pixels: pixels) ?? filled
     }
 
     static func renderNSImage(_ style: FolderStyle, pixels: Int) -> NSImage {
@@ -169,7 +174,7 @@ enum IconRenderer {
                                               onto folder: CGImage,
                                               mask: CGImage,
                                               pixels: Int) -> CGImage? {
-        guard let data = style.overlay.imageData,
+        guard let data = style.fill.imageData,
               let image = NSImage(data: data) else { return folder }
         guard let ctx = makeContext(pixels: pixels) else { return folder }
 
@@ -180,18 +185,18 @@ enum IconRenderer {
 
         guard let artwork = GlyphFactory.rasterizeFilling(image, side: pixels) else { return folder }
 
-        let zoom = max(0.35, CGFloat(style.overlayScale))
+        let zoom = max(0.35, CGFloat(style.fillScale))
         let drawSide = side * zoom
-        let cx = side * (0.5 + CGFloat(style.overlayOffsetX))
-        let cy = side * (0.47 + CGFloat(style.overlayOffsetY))
+        let cx = side * (0.5 + CGFloat(style.fillOffsetX))
+        let cy = side * (0.47 + CGFloat(style.fillOffsetY))
         let frame = CGRect(x: cx - drawSide / 2, y: cy - drawSide / 2,
                            width: drawSide, height: drawSide)
 
-        let alpha = CGFloat(style.overlayOpacity)
+        let alpha = CGFloat(style.fillOpacity)
         ctx.saveGState()
-        if abs(style.overlayRotation) > 0.01 {
+        if abs(style.fillRotation) > 0.01 {
             ctx.translateBy(x: cx, y: cy)
-            ctx.rotate(by: CGFloat(style.overlayRotation) * .pi / 180)
+            ctx.rotate(by: CGFloat(style.fillRotation) * .pi / 180)
             ctx.translateBy(x: -cx, y: -cy)
         }
         ctx.setAlpha(alpha)
