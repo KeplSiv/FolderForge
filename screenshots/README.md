@@ -13,7 +13,6 @@ so no real paths or personal folder names appear in the docs.
 | `icns-fill.png`    | External ICNS applied as the whole folder icon.             | Cropped from `--image file.icns`.  |
 | `add-folders.png`  | The Add Folders sheet: depth, exclusions, match preview.   | `--ui-snapshot --view sheet`       |
 | `presets.png`      | The built-in presets.                                     | `--contact-sheet`                  |
-| `finishes.png`     | Every finish across several tints.                         | `--contact-sheet --finishes`       |
 
 ## Regenerating
 
@@ -48,14 +47,12 @@ FOLDERS=$(find "$D" -type d ! -path "$D" | sort | paste -sd, -)
 "$BIN" --ui-snapshot icon-overlay-source.png --width 1080 --height 700 --tab icon --folders "$FOLDERS" --image "$ART" --symbol wand.and.sparkles --finish raised
 "$BIN" --ui-snapshot icns-fill-source.png --width 1080 --height 700 --tab fill --folders "$FOLDERS" --image "$ICON"
 "$BIN" --contact-sheet presets.png --columns 8 --cell 180
-"$BIN" --contact-sheet finishes.png --finishes --columns 6 --cell 200
 
 magick main-window.png -crop 480x1120+0+0  +repage sidebar-tree.png
 magick main-window.png -crop 724x1400+1436+0 +repage fill-image.png
 magick icon-overlay-source.png -crop 724x1400+1436+0 +repage icon-overlay.png
 magick icns-fill-source.png -crop 724x1400+1436+0 +repage icns-fill.png
 magick presets.png     -crop 1440x808+0+0  +repage presets.png
-magick finishes.png    -crop 600x1110+0+0  +repage finishes.png
 ```
 
 `--ui-snapshot` needs an unlocked screen — the window server won't composite a window while

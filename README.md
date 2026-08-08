@@ -183,10 +183,6 @@ there is no folder canvas left to edit.
 Finishes decide how overlays sit on the folder: carved in, stamped on, raised above the
 surface, or kept in their natural colors.
 
-<!-- 📸 screenshots/finishes.png -->
-
-![Finishes](screenshots/finishes.png)
-
 | Finish       | Looks like                                                     |
 | ------------ | -------------------------------------------------------------- |
 | **Engraved** | Carved into the folder face. Apple's own look — the default.   |
