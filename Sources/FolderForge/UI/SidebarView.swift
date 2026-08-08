@@ -216,13 +216,21 @@ struct SidebarView: View {
         .disabled(BackupStore.appliedStyle(for: item.url) == nil)
         Divider()
         Button("Restore Original Icon") {
-            state.selection = [item.id]
+            focusContextTarget(item)
             state.resetSelected()
         }
         Button("Remove from List") {
-            state.folders.removeAll { $0.id == item.id }
-            state.selection.remove(item.id)
+            focusContextTarget(item)
+            state.removeSelected()
         }
+    }
+
+    /// A row-level context menu should respect an existing multi-selection when the clicked
+    /// row is already part of it. If the user invoked the menu on an unselected row, treat
+    /// that row as the target instead.
+    private func focusContextTarget(_ item: FolderItem) {
+        guard !state.selection.contains(item.id) else { return }
+        state.selection = [item.id]
     }
 
     /// Type or paste a path and press return. `~` works, so do quoted and shell-escaped
