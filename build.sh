@@ -22,8 +22,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.0.4"
-BUILD="5"
+VERSION="1.0.5"
+BUILD="6"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
@@ -113,6 +113,12 @@ cat > "$CONTENTS/Info.plist" <<PLIST
             <key>CFBundleTypeRole</key>     <string>Editor</string>
             <key>LSHandlerRank</key>        <string>Owner</string>
             <key>CFBundleTypeExtensions</key><array><string>folderstyle</string></array>
+        </dict>
+        <dict>
+            <key>CFBundleTypeName</key>     <string>FolderForge Rule Set</string>
+            <key>CFBundleTypeRole</key>     <string>Editor</string>
+            <key>LSHandlerRank</key>        <string>Owner</string>
+            <key>CFBundleTypeExtensions</key><array><string>folderrules</string></array>
         </dict>
         <dict>
             <key>CFBundleTypeName</key>     <string>Icon Artwork</string>

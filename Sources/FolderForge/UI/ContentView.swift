@@ -39,6 +39,9 @@ struct ContentView: View {
         .sheet(isPresented: $state.showingAddSheet) {
             AddFoldersSheet(state: state)
         }
+        .sheet(isPresented: $state.showingSmartStyle) {
+            SmartStyleSheet(state: state)
+        }
         .confirmationDialog(
             "\(confirming?.verb ?? "") all \(state.folders.count) folders?",
             isPresented: Binding(get: { confirming != nil },
@@ -102,10 +105,10 @@ struct ContentView: View {
         }
 
         ToolbarItem {
-            Button { state.randomize() } label: {
-                Label("Surprise Me", systemImage: "dice")
+            Button { state.showingSmartStyle = true } label: {
+                Label("Smart Style", systemImage: "wand.and.stars")
             }
-            .help("Generate a random style (⌘R)")
+            .help("Style a folder tree from deterministic name rules")
         }
 
         ToolbarItem {

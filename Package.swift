@@ -11,6 +11,11 @@ let package = Package(
         .executableTarget(
             name: "FolderForge",
             path: "Sources/FolderForge"
+        ),
+        .testTarget(
+            name: "FolderForgeTests",
+            dependencies: ["FolderForge"],
+            path: "Tests/FolderForgeTests"
         )
     ]
 )

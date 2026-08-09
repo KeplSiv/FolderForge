@@ -34,8 +34,9 @@ originals.
 | [Quick start](#quick-start)                           | [How the recoloring works](#how-the-recoloring-works)           |
 | [The sidebar](#the-sidebar)                           | [Command line](#command-line)                                   |
 | [Adding a whole tree](#adding-a-whole-tree)           | [Keyboard shortcuts](#keyboard-shortcuts)                       |
-| [Restore & undo](#restore--undo)                      | [Behavior & edge cases](#behavior--edge-cases)                  |
-| [ICNS references](#icns-references)                   | [Permissions](#permissions) · [Storage](#where-things-are-kept) |
+| [Smart Style rules](#smart-style-rules)               | [Restore & undo](#restore--undo)                               |
+| [Behavior & edge cases](#behavior--edge-cases)        | [ICNS references](#icns-references)                             |
+| [Permissions](#permissions)                           | [Storage](#where-things-are-kept)                               |
 
 ---
 
@@ -122,6 +123,38 @@ Then it asks:
 
 Before anything is added, FolderForge shows the exact collapsible tree it found. A 2000-folder
 cap keeps huge scans from running away.
+
+---
+
+## Smart Style rules
+
+**Smart Style** turns a reusable set of local rules into a previewable batch. Choose a root,
+inspect every proposal, then apply the matched designs in one action. Nothing is sent to a
+service and nothing changes until you press **Apply**.
+
+The default rule set recognises common names such as `Receipts`, `Invoices`, `Payroll`,
+`Tax`, `Contracts`, `Photos`, `Screenshots`, and `Archive*`. It also includes deterministic
+developer markers (`package.json`, `Package.swift`, `.git`, `*.xcodeproj`, and more) and
+majority-file rules for music, photos, video, documents, Swift, and Python folders.
+
+- **Name rules** support exact, contains, starts-with, ends-with, and shell glob matching.
+- **Path rules** can target a relative location, such as `Work/*/Archive`.
+- **Marker rules** inspect direct child names only; no file contents are read.
+- **File-type rules** inspect direct files and require a configurable majority threshold.
+- **Priority and conflicts** are explicit. Smart Style shows the winning rule and every
+  alternative before applying; choose an alternative to create a one-folder path override.
+- **Rule sets** can inherit a base set, be duplicated, exported as `.folderrules`, or imported
+  on another Mac.
+- **Repeated structures** identify folder names that recur three or more times, with a quick
+  way to make them consistent. The consistency audit flags folders whose saved FolderForge
+  style differs from the rule's current result.
+- **Watch roots** are opt-in. While FolderForge is running, a watched tree re-evaluates new
+  folders and renames, applies only unambiguous matches, and never resets unmatched folders.
+
+Smart Style starts at **one level down** so selecting Desktop or a broad workspace is safe. Pick
+an exact depth or **All levels** when you are ready to recurse. It deliberately skips hidden
+folders, bundles, symlinks, and the same safe exclusions as **Add Folders**. Each run has a
+2,000-folder cap.
 
 ---
 

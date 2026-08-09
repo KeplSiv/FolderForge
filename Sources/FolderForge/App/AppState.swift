@@ -52,6 +52,7 @@ final class AppState {
     var style = FolderStyle()
 
     var presets = PresetStore()
+    var smartRules = SmartRuleStore()
 
     var previewScale: Double = 1.0
     var showingOriginal = false
@@ -60,6 +61,7 @@ final class AppState {
     var inspectorTab: InspectorTab = .color
     var showingAddSheet = false
     var showingSettings = false
+    var showingSmartStyle = false
 
     enum InspectorTab: String, CaseIterable, Identifiable {
         case color, fill, icon, tune
@@ -402,6 +404,8 @@ final class AppState {
         guard !pairs.isEmpty else { return }
         guard batchTask == nil else { return }
 
+        var previous: [URL: FolderStyle?] = [:]
+        for pair in pairs { previous[pair.0] = BackupStore.appliedStyle(for: pair.0) }
         applyProgress = (0, pairs.count)
 
         batchTask = Task { @MainActor in
@@ -423,6 +427,9 @@ final class AppState {
             applyProgress = nil
             batchTask = nil
             refreshBadges()
+            lastApply = AppliedSnapshot(urls: outcomes.filter(\.succeeded).map(\.url),
+                                        previous: previous,
+                                        styleName: "Smart Style")
 
             let failed = outcomes.filter { !$0.succeeded }
             if cancelled {
@@ -436,6 +443,49 @@ final class AppState {
                               message: "\(failed.count) of \(pairs.count) failed",
                               detail: failed.first?.error?.localizedDescription)
             }
+        }
+    }
+
+    func previewSmartStyle(root: URL, options: FolderScanner.Options,
+                           ruleSetID: UUID? = nil) -> SmartStylePreview {
+        SmartStyleEngine.preview(root: root, options: options,
+                                 rules: smartRules.resolvedRules(for: ruleSetID),
+                                 presets: presets.builtIn,
+                                 customPresets: presets.userPresets)
+    }
+
+    func applySmartStyle(_ preview: SmartStylePreview) {
+        guard !preview.matches.isEmpty else {
+            toast = Toast(kind: .info, message: "No matching folders to style")
+            return
+        }
+        addFolders(preview.scannedURLs)
+        Task { await applyMappedSuggestions(preview.matches.map { ($0.url, $0.style) }) }
+    }
+
+    /// Starts opt-in FSEvents roots after the app has finished creating its UI. A watch only
+    /// applies an unambiguous matching rule; it never resets an unmatched folder.
+    func resumeSmartRuleWatches() {
+        smartRules.resumeWatches { [weak self] watch in
+            self?.reevaluateSmartRuleWatch(watch)
+        }
+    }
+
+    private func reevaluateSmartRuleWatch(_ watch: SmartRuleWatch) {
+        guard watch.reapplyOnChanges, batchTask == nil else { return }
+        Task { @MainActor in
+            var options = FolderScanner.Options()
+            options.depth = watch.scanDepth
+            options.includeRoot = watch.includeRoot
+            let preview = previewSmartStyle(root: watch.rootURL, options: options,
+                                            ruleSetID: watch.ruleSetID)
+            let pairs = preview.matches
+                .filter { !$0.hasConflict }
+                .filter { BackupStore.appliedStyle(for: $0.url)?.matchesAppearance(of: $0.style) != true }
+                .map { ($0.url, $0.style) }
+            guard !pairs.isEmpty else { return }
+            addFolders(preview.scannedURLs)
+            await applyMappedSuggestions(pairs)
         }
     }
 

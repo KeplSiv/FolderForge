@@ -196,7 +196,7 @@ struct PreviewPane: View {
 
                 Button {
                 } label: {
-                    Label("Hold to Compare", systemImage: "square.on.square.dashed")
+                    Label("Hold to Compare", systemImage: "arrow.left.and.right.square")
                         .font(.system(size: 11))
                 }
                 .buttonStyle(.accessoryBar)
