@@ -7,10 +7,10 @@
   </tr>
 </table>
 
-**A macOS folder icon designer.**
-Pick a color or image fill, layer on a symbol, emoji or text overlay, or import a complete
-custom ICNS — then write it straight to your folders with a one-click path back to the
-originals.
+**A macOS folder icon designer and local automation tool.**
+Pick a color or image fill, layer on a symbol, emoji or text overlay, import a complete custom
+ICNS, or use Smart Style rules across a folder tree — then write the result straight to your
+folders with a one-click path back to the originals.
 
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-black?style=flat-square&logo=apple)
 ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-F05138?style=flat-square&logo=swift&logoColor=white)
@@ -82,10 +82,6 @@ launch, so you can pick up where you left off.
 
 ## The sidebar
 
-<!-- 📸 screenshots/sidebar-tree.png -->
-
-![Sidebar tree](screenshots/sidebar-tree.png)
-
 Folders imported recursively **nest under their parent** rather than piling up as a flat
 list. Each nesting level draws a vertical guide, so one recursive import reads as one
 connected group.
@@ -96,7 +92,8 @@ connected group.
 - The header counts what's loaded: `Folders · 19`.
 - Badges: 🪄 styled by FolderForge · 🖼️ has a custom icon from somewhere else · nothing = plain.
 - <kbd>⌫</kbd> removes the selection from the list. Right-click a row for Reveal in Finder,
-  Load This Folder's Style, Restore Original Icon, Remove from List.
+  Load This Folder's Style, Restore Original Icon, Remove from List. With multiple folders
+  selected, these actions operate on the whole selection.
 
 Removed some folders and want them back? **Settings → Customized folders → Add Them All to
 the List**.
@@ -104,10 +101,6 @@ the List**.
 ---
 
 ## Adding a whole tree
-
-<!-- 📸 screenshots/add-folders.png -->
-
-![Add Folders sheet](screenshots/add-folders.png)
 
 The Add Folders sheet starts with a path field that supports:
 
@@ -132,6 +125,8 @@ cap keeps huge scans from running away.
 inspect every proposal, then apply the matched designs in one action. Nothing is sent to a
 service and nothing changes until you press **Apply**.
 
+![Smart Style preview](screenshots/smart-style.png)
+
 The default rule set recognises common names such as `Receipts`, `Invoices`, `Payroll`,
 `Tax`, `Contracts`, `Photos`, `Screenshots`, and `Archive*`. It also includes deterministic
 developer markers (`package.json`, `Package.swift`, `.git`, `*.xcodeproj`, and more) and
@@ -141,10 +136,11 @@ majority-file rules for music, photos, video, documents, Swift, and Python folde
 - **Path rules** can target a relative location, such as `Work/*/Archive`.
 - **Marker rules** inspect direct child names only; no file contents are read.
 - **File-type rules** inspect direct files and require a configurable majority threshold.
-- **Priority and conflicts** are explicit. Smart Style shows the winning rule and every
-  alternative before applying; choose an alternative to create a one-folder path override.
-- **Rule sets** can inherit a base set, be duplicated, exported as `.folderrules`, or imported
-  on another Mac.
+- **Conflicts** are explicit. The first matching rule wins, Smart Style shows the alternatives
+  before applying, and choosing one makes a one-folder path override.
+- **Rule sets** start with the shipped Starter base enabled. Create a separate rule set for
+  local additions, turn the base off only when needed, or duplicate, export, and import sets as
+  `.folderrules` files.
 - **Repeated structures** identify folder names that recur three or more times, with a quick
   way to make them consistent. The consistency audit flags folders whose saved FolderForge
   style differs from the rule's current result.
@@ -195,15 +191,11 @@ Fill controls what the folder face is made from:
 Image fills can be fit or filled, faded, dragged into position and reset without touching the
 overlay controls.
 
-![Image fill controls](screenshots/fill-image.png)
-
 ### Icon — 300+ SF Symbols, emoji or text overlays
 
 The Icon tab now stays focused on overlays. Choose searchable SF Symbols, emoji or short text,
 then tune placement and finish separately from the fill underneath. That means an image fill can
 still carry a symbol, emoji or label on top.
-
-![Overlay controls](screenshots/icon-overlay.png)
 
 External downloaded `.icns` files are different: they apply as complete icons rather than
 editable overlays. Once an ICNS is loaded, Color, Icon and Tune controls are disabled because
@@ -254,8 +246,6 @@ FolderForge can import `.icns` files from your Mac. Good places to find or make 
 
 Notes:
 
-- The Hollow Knight Silksong example in this README uses an external icon from
-  [macOSicons](https://macosicons.com/?icon=kVqQ3Xg6Co).
 - Check each icon's license before using it, especially for commercial or redistributed work.
 - FolderForge does not bundle or redistribute third-party icons.
 
@@ -472,7 +462,7 @@ Without the snapshot ledger, **Restore** falls back to the plain system folder.
 ```
 Sources/FolderForge/
   App/        Entry (CLI vs GUI), AppState, App + menus
-  Core/       Model, renderer, glyph rasterizer, disk I/O, presets, scanner, CLI
+  Core/       Model, renderer, glyph rasterizer, disk I/O, presets, scanner, Smart Style, CLI
   UI/         ContentView, sidebar, preview, inspector, pickers, sheets
 Resources/    AppIcon.svg — the app icon, in vector
 Scripts/      svg2png.swift — rasterizes the icon at each iconset size
