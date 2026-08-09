@@ -11,6 +11,7 @@ enum UISnapshot {
     enum Target: String {
         case main
         case sheet
+        case smart
     }
 
     static func capture(target: Target,
@@ -44,6 +45,7 @@ enum UISnapshot {
         let root: AnyView = switch target {
         case .main: AnyView(ContentView(state: state))
         case .sheet: AnyView(AddFoldersSheet(state: state, initialPath: sheetPath))
+        case .smart: AnyView(SmartStyleSheet(state: state, initialPath: sheetPath))
         }
 
         let hosting = NSHostingView(rootView: root)

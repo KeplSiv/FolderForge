@@ -12,6 +12,7 @@ struct FolderForgeApp: App {
                     NSApp.setActivationPolicy(.regular)
                     NSApp.activate()
                     state.loadCustomizedFolders()
+                    state.resumeSmartRuleWatches()
                     state.handleOpenURLs(AppDelegate.drainPendingOpenURLs())
                 }
         }
@@ -46,6 +47,9 @@ struct FolderForgeApp: App {
         }
 
         CommandMenu("Folder") {
+            Button("Smart Style…") { state.showingSmartStyle = true }
+                .keyboardShortcut("s", modifiers: [.command, .option])
+            Divider()
             Button("Apply Icon") { state.apply() }
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(state.targets.isEmpty)

@@ -156,6 +156,18 @@ enum FolderScanner {
         return false
     }
 
+    /// Case-insensitive shell-glob matching for a folder name. Smart Style uses this rather
+    /// than the path-aware matcher above because V1 rules intentionally target names only.
+    static func matchesName(_ name: String, pattern: String) -> Bool {
+        fnmatch(pattern, name, Int32(FNM_CASEFOLD)) == 0
+    }
+
+    /// Same shell-glob behaviour as a path exclusion, exposed for path-aware Smart Style
+    /// rules and per-rule negations.
+    static func matchesPath(_ path: String, pattern: String) -> Bool {
+        fnmatch(pattern, path, Int32(FNM_CASEFOLD | FNM_PATHNAME)) == 0
+    }
+
     /// Splits a user-typed exclusion list on commas and newlines.
     static func parsePatterns(_ text: String) -> [String] {
         text.split(whereSeparator: { $0 == "," || $0 == "\n" })

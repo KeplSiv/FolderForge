@@ -182,7 +182,7 @@ private struct FillTab: View {
     }
 
     var body: some View {
-        SectionLabel(text: "Fill", symbol: "rectangle.on.rectangle")
+        SectionLabel(text: "Fill", symbol: "paintbrush.pointed")
         Picker("", selection: style.fill.kind) {
             ForEach(FillKind.allCases) { kind in
                 Text(kind.title).tag(kind)
@@ -271,7 +271,7 @@ private struct FillTab: View {
 
     private var importedFullIconWell: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Imported ICNS", symbol: "app.dashed")
+            SectionLabel(text: "Imported ICNS", symbol: "app.badge.checkmark")
 
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
@@ -289,7 +289,7 @@ private struct FillTab: View {
                         .padding(10)
                 } else {
                     VStack(spacing: 5) {
-                        Image(systemName: "app.dashed")
+                        Image(systemName: "app.badge.checkmark")
                             .font(.system(size: 22, weight: .light))
                             .foregroundStyle(.tertiary)
                         Text("Drop an ICNS")
@@ -464,7 +464,7 @@ private struct IconTab: View {
     }
 
     var body: some View {
-        SectionLabel(text: "Overlay", symbol: "star")
+        SectionLabel(text: "Overlay", symbol: "sparkles")
         Picker("", selection: style.overlay.kind) {
             ForEach(overlayKinds) { kind in
                 Text(kind.title).tag(kind)
@@ -603,7 +603,7 @@ private struct IconTab: View {
 
     private var importedFullIconWell: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Imported Icon", symbol: "app.dashed")
+            SectionLabel(text: "Imported Icon", symbol: "app.badge.checkmark")
 
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
@@ -621,7 +621,7 @@ private struct IconTab: View {
                         .padding(10)
                 } else {
                     VStack(spacing: 5) {
-                        Image(systemName: "app.dashed")
+                        Image(systemName: "app.badge.checkmark")
                             .font(.system(size: 22, weight: .light))
                             .foregroundStyle(.tertiary)
                         Text("Drop an ICNS")

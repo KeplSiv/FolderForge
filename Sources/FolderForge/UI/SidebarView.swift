@@ -191,12 +191,12 @@ struct SidebarView: View {
             Spacer(minLength: 4)
 
             if item.isCustomized {
-                Image(systemName: "wand.and.stars")
+                Image(systemName: "checkmark.seal")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .help("Made in FolderForge with “\(item.appliedStyleName ?? "")”")
             } else if item.hasForeignIcon {
-                Image(systemName: "photo")
+                Image(systemName: "app.badge")
                     .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
                     .help("Already has a custom icon that FolderForge didn't make. "
