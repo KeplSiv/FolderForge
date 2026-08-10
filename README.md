@@ -6,7 +6,7 @@
 
 Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS files.
 
-[Download notarized v1.0.6](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.6/FolderForge-1.0.6-notarized.dmg) · macOS 14+
+[Download notarized v1.0.6](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.6/FolderForge-1.0.6.dmg) · macOS 14+
 
 ![FolderForge icon examples](screenshots/hero.png)
 
