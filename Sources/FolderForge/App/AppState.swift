@@ -369,6 +369,7 @@ final class AppState {
             applyProgress = nil
             batchTask = nil
             refreshBadges()
+            syncStyleToSelection(preservingDirtyStyle: false)
 
             let failed = outcomes.filter { !$0.succeeded }
             if cancelled {
@@ -540,7 +541,7 @@ final class AppState {
     /// it has one, a plain folder if it doesn't.
     ///
     /// Unsaved work isn't thrown away — it goes to the style clipboard so ⌥⌘V puts it back.
-    func syncStyleToSelection() {
+    func syncStyleToSelection(preservingDirtyStyle: Bool = true) {
         let selected = selectedFolders
         guard !selected.isEmpty else { return }
 
@@ -566,7 +567,7 @@ final class AppState {
         } else if noneCustomized {
             // Nothing customized here. Don't clobber a design in progress: adding a second
             // plain folder to the selection is how you apply one design to both.
-            if styleIsDirty { return }
+            if preservingDirtyStyle && styleIsDirty { return }
             target = Self.plainStyle(base: style.baseIcon)
         } else {
             // Mixed selection — no single truth to show, so leave the design alone.
@@ -578,7 +579,7 @@ final class AppState {
             return
         }
 
-        if styleIsDirty {
+        if preservingDirtyStyle && styleIsDirty {
             copiedStyle = style
             toast = Toast(kind: .info,
                           message: "Your unsaved design was kept",

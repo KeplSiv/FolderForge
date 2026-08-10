@@ -7,11 +7,54 @@ import UniformTypeIdentifiers
 /// moves those, we fall back to `NSWorkspace.icon(for:)`, which is always available but
 /// tops out at whatever the current system provides.
 enum BaseIconProvider {
+    struct NativeFolderLayers {
+        let back: CGImage
+        let paper: CGImage
+        let front: CGImage
+    }
+
     private static let coreTypesPath =
         "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources"
 
     private static var cache: [String: CGImage] = [:]
+    private static var layerCache: [String: NativeFolderLayers] = [:]
     private static let lock = NSLock()
+
+    /// Apple's current folder artwork is stored as three separately composited layers.
+    /// Keeping the paper separate lets tinting preserve Finder's exact inset and shadow.
+    static func nativeFolderLayers(pixels: Int) -> NativeFolderLayers? {
+        let key = "native-layers@\(pixels)"
+        lock.lock()
+        if let hit = layerCache[key] { lock.unlock(); return hit }
+        lock.unlock()
+
+        guard let bundle = Bundle(path: "/System/Library/CoreServices/CoreTypes.bundle") else {
+            return nil
+        }
+        let assetSize: Int
+        switch pixels {
+        case ...16: assetSize = 16
+        case ...64: assetSize = 32
+        case ...128: assetSize = 128
+        case ...256: assetSize = 256
+        default: assetSize = 512
+        }
+
+        func layer(_ name: String) -> CGImage? {
+            let resource = NSImage.Name("FolderComponent_\(name)/image_\(assetSize)")
+            guard let image = bundle.image(forResource: resource) else { return nil }
+            return rasterize(image, pixels: pixels)
+        }
+
+        guard let back = layer("BackFlap"),
+              let paper = layer("PaperSheet"),
+              let front = layer("FrontFlap") else {
+            return nil
+        }
+        let result = NativeFolderLayers(back: back, paper: paper, front: front)
+        lock.lock(); layerCache[key] = result; lock.unlock()
+        return result
+    }
 
     /// A square CGImage of the stock folder at `pixels` × `pixels`.
     static func cgImage(_ kind: BaseIconKind, pixels: Int) -> CGImage? {
@@ -34,11 +77,17 @@ enum BaseIconProvider {
         if let hit = imageCache[kind.rawValue] { lock.unlock(); return hit }
         lock.unlock()
 
-        let url = URL(fileURLWithPath: coreTypesPath)
-            .appendingPathComponent(kind.resourceName)
-            .appendingPathExtension("icns")
-
-        let image = NSImage(contentsOf: url) ?? NSWorkspace.shared.icon(for: .folder)
+        let image: NSImage?
+        if kind == .generic {
+            // Ask Launch Services for the current system folder artwork so the default shape
+            // matches Finder on the version of macOS the user is running.
+            image = NSWorkspace.shared.icon(for: .folder)
+        } else {
+            let url = URL(fileURLWithPath: coreTypesPath)
+                .appendingPathComponent(kind.resourceName)
+                .appendingPathExtension("icns")
+            image = NSImage(contentsOf: url) ?? NSWorkspace.shared.icon(for: .folder)
+        }
 
         lock.lock(); imageCache[kind.rawValue] = image; lock.unlock()
         return image
@@ -48,7 +97,7 @@ enum BaseIconProvider {
 
     /// Average HSB *brightness* (max RGB component) of the folder's opaque pixels, 0…1.
     ///
-    /// A `.color` blend only transfers hue and saturation — it deliberately keeps the
+    /// A `.hue` blend transfers hue while deliberately keeping the backdrop's brightness.
     /// backdrop's brightness. That's what makes the recolor look native, but it also means
     /// picking near-black or near-white gives you a gray folder. The renderer uses this
     /// number to work out how far to push the folder's brightness.
@@ -106,9 +155,22 @@ enum BaseIconProvider {
 
         ctx.interpolationQuality = .high
 
-        var rect = CGRect(x: 0, y: 0, width: pixels, height: pixels)
-        // Ask the NSImage for the representation closest to the size we want.
-        if let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: [
+        // Finder's folder icon has hand-tuned representations for each display size. Select
+        // the closest one explicitly instead of letting AppKit flatten the largest master.
+        let representation = image.representations
+            .filter { $0.pixelsWide > 0 && $0.pixelsHigh > 0 }
+            .min { lhs, rhs in
+                abs(lhs.pixelsWide - pixels) < abs(rhs.pixelsWide - pixels)
+            }
+        var rect = CGRect(
+            origin: .zero,
+            size: representation?.size ?? CGSize(width: pixels, height: pixels)
+        )
+        if let cg = representation?.cgImage(
+            forProposedRect: &rect,
+            context: nil,
+            hints: [.interpolation: NSImageInterpolation.high.rawValue]
+        ) ?? image.cgImage(forProposedRect: &rect, context: nil, hints: [
             .interpolation: NSImageInterpolation.high.rawValue
         ]) {
             let aspect = CGFloat(cg.width) / CGFloat(cg.height)

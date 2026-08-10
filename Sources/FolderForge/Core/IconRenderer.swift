@@ -6,9 +6,8 @@ import CoreImage.CIFilterBuiltins
 ///
 /// Pipeline, in order:
 ///   1. rasterize the stock folder art
-///   2. recolor it with a `.color` blend (keeps every gradient, shadow and highlight intact —
-///      we replace hue + saturation and keep the original luminosity, exactly how you'd
-///      recolor artwork in Photoshop)
+///   2. recolor it with a `.hue` blend so Apple's saturation, white inner edge, shading,
+///      translucency and shadow remain part of the native artwork
 ///   3. tone pass — saturation / brightness / contrast via CoreImage
 ///   4. composite the overlay glyph onto the folder face
 enum IconRenderer {
@@ -29,9 +28,15 @@ enum IconRenderer {
             return GlyphFactory.rasterizeFitting(image, side: pixels)
         }
 
-        guard let base = BaseIconProvider.cgImage(style.baseIcon, pixels: pixels) else { return nil }
+        guard let base = renderedBase(style: style, pixels: pixels) else { return nil }
 
-        let colored = recolor(base: base, style: style, pixels: pixels) ?? base
+        let colored: CGImage
+        if style.baseIcon == .generic,
+           let layers = BaseIconProvider.nativeFolderLayers(pixels: pixels) {
+            colored = renderNativeFolder(layers: layers, style: style, pixels: pixels) ?? base
+        } else {
+            colored = recolor(base: base, style: style, pixels: pixels) ?? base
+        }
         let toned = applyTone(colored, style: style) ?? colored
         let filled: CGImage
         if style.fill.kind == .image {
@@ -68,16 +73,128 @@ enum IconRenderer {
 
     // MARK: - Step 2: recolor
 
-    private static func recolor(base: CGImage, style: FolderStyle, pixels: Int) -> CGImage? {
+    private static func renderedBase(style: FolderStyle, pixels: Int) -> CGImage? {
+        if style.baseIcon == .generic,
+           let layers = BaseIconProvider.nativeFolderLayers(pixels: pixels) {
+            return compositeNativeFolder(layers: layers, back: layers.back,
+                                         paper: layers.paper, front: layers.front, pixels: pixels)
+        }
+        return BaseIconProvider.cgImage(style.baseIcon, pixels: pixels)
+    }
+
+    private static func renderNativeFolder(layers: BaseIconProvider.NativeFolderLayers,
+                                           style: FolderStyle,
+                                           pixels: Int) -> CGImage? {
+        guard style.separateLayerColors else {
+            let back = recolor(base: layers.back, style: style, pixels: pixels) ?? layers.back
+            let front = recolor(base: layers.front, style: style, pixels: pixels) ?? layers.front
+            return compositeNativeFolder(layers: layers, back: back,
+                                         paper: layers.paper, front: front, pixels: pixels)
+        }
+
+        let back = style.backLayer.enabled
+            ? renderNativeLayer(base: layers.back, layer: style.backLayer,
+                                style: style, pixels: pixels, isPaper: false)
+            : nil
+        let paper = style.paperLayer.enabled
+            ? renderNativeLayer(base: layers.paper, layer: style.paperLayer,
+                                style: style, pixels: pixels, isPaper: true)
+            : nil
+        let front = renderNativeLayer(base: layers.front, layer: style.frontLayer,
+                                      style: style, pixels: pixels, isPaper: false)
+        return compositeNativeFolder(layers: layers, back: back,
+                                     paper: paper, front: front, pixels: pixels)
+    }
+
+    private static func renderNativeLayer(base: CGImage,
+                                          layer: NativeFolderLayerStyle,
+                                          style: FolderStyle,
+                                          pixels: Int,
+                                          isPaper: Bool) -> CGImage {
+        let layerStyle = layerStyle(style, layer: layer)
+        let colored = recolor(base: base, style: layerStyle, pixels: pixels,
+                              blendMode: isPaper ? .multiply : .hue) ?? base
+        guard layer.fillKind == .image, let data = layer.imageData,
+              let image = NSImage(data: data) else { return colored }
+        return compositeLayerImage(image, onto: colored, mask: base,
+                                   layer: layer, pixels: pixels) ?? colored
+    }
+
+    private static func layerStyle(_ style: FolderStyle,
+                                   layer: NativeFolderLayerStyle) -> FolderStyle {
+        var result = style
+        result.tint = layer.tint
+        result.gradientEnabled = layer.gradientEnabled
+        result.tintSecondary = layer.tintSecondary
+        result.gradientAngle = layer.gradientAngle
+        return result
+    }
+
+    private static func compositeLayerImage(_ image: NSImage,
+                                            onto layerImage: CGImage,
+                                            mask: CGImage,
+                                            layer: NativeFolderLayerStyle,
+                                            pixels: Int) -> CGImage? {
+        guard let artwork = GlyphFactory.rasterizeFilling(image, side: pixels),
+              let context = makeContext(pixels: pixels) else { return nil }
+        let side = CGFloat(pixels)
+        let full = CGRect(x: 0, y: 0, width: side, height: side)
+        let scale = max(0.15, CGFloat(layer.imageScale))
+        let drawSide = side * scale
+        let center = CGPoint(
+            x: side * (0.5 + CGFloat(layer.imageOffsetX)),
+            y: side * (0.5 + CGFloat(layer.imageOffsetY))
+        )
+        let frame = CGRect(x: center.x - drawSide / 2, y: center.y - drawSide / 2,
+                           width: drawSide, height: drawSide)
+
+        context.draw(layerImage, in: full)
+        context.saveGState()
+        context.clip(to: full, mask: mask)
+        if abs(layer.imageRotation) > 0.01 {
+            context.translateBy(x: center.x, y: center.y)
+            context.rotate(by: CGFloat(layer.imageRotation) * .pi / 180)
+            context.translateBy(x: -center.x, y: -center.y)
+        }
+        context.setAlpha(CGFloat(layer.imageOpacity))
+        context.draw(artwork, in: frame)
+        context.restoreGState()
+
+        // Reapply Apple's native lighting so an image fill still reads as the same layer.
+        context.saveGState()
+        context.clip(to: full, mask: mask)
+        context.setBlendMode(.softLight)
+        context.setAlpha(0.38)
+        context.draw(layerImage, in: full)
+        context.restoreGState()
+        return context.makeImage()
+    }
+
+    private static func compositeNativeFolder(layers: BaseIconProvider.NativeFolderLayers,
+                                              back: CGImage?,
+                                              paper: CGImage?,
+                                              front: CGImage?,
+                                              pixels: Int) -> CGImage? {
+        guard let context = makeContext(pixels: pixels) else { return nil }
+        let rect = CGRect(x: 0, y: 0, width: pixels, height: pixels)
+        if let back { context.draw(back, in: rect) }
+        if let paper { context.draw(paper, in: rect) }
+        if let front { context.draw(front, in: rect) }
+        return context.makeImage()
+    }
+
+    private static func recolor(base: CGImage, style: FolderStyle, pixels: Int,
+                                blendMode: CGBlendMode = .hue) -> CGImage? {
         guard style.tintStrength > 0.001 else { return base }
         guard let ctx = makeContext(pixels: pixels) else { return nil }
 
         let rect = CGRect(x: 0, y: 0, width: pixels, height: pixels)
         ctx.draw(base, in: rect)
 
-        // Replace hue + saturation, keep luminosity.
+        // Replace hue only. A `.color` blend also transfers saturation, which paints over
+        // the low-saturation white inner edge in Apple's native folder artwork.
         ctx.saveGState()
-        ctx.setBlendMode(.color)
+        ctx.setBlendMode(blendMode)
         ctx.setAlpha(CGFloat(style.tintStrength))
 
         if style.gradientEnabled {
@@ -90,7 +207,7 @@ enum IconRenderer {
         }
         ctx.restoreGState()
 
-        // The `.color` blend keeps the stock artwork's brightness, so a near-black or
+        // The `.hue` blend keeps the stock artwork's brightness, so a near-black or
         // near-white tint would come out gray. Push the luminosity the rest of the way.
         if style.matchLuminance {
             let baseBrightness = BaseIconProvider.averageBrightness(style.baseIcon)
@@ -120,13 +237,17 @@ enum IconRenderer {
             ctx.restoreGState()
         }
 
-        // The blend painted over transparent pixels too; clip back to the folder silhouette.
-        ctx.saveGState()
-        ctx.setBlendMode(.destinationIn)
-        ctx.draw(base, in: rect)
-        ctx.restoreGState()
+        guard let recolored = ctx.makeImage() else { return nil }
+        guard let finalContext = makeContext(pixels: pixels) else { return recolored }
+        finalContext.draw(recolored, in: rect)
 
-        return ctx.makeImage()
+        // The blend painted over transparent pixels too; clip back to the folder silhouette.
+        finalContext.saveGState()
+        finalContext.setBlendMode(.destinationIn)
+        finalContext.draw(base, in: rect)
+        finalContext.restoreGState()
+
+        return finalContext.makeImage()
     }
 
     private static func drawGradient(in ctx: CGContext, rect: CGRect,

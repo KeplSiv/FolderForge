@@ -71,9 +71,123 @@ private struct LockedForICNSView: View {
 private struct ColorTab: View {
     @Binding var style: FolderStyle
 
+    private var primaryTint: Binding<RGBA> {
+        Binding(
+            get: { style.tint },
+            set: {
+                style.tint = $0
+                style.tintStrength = 1
+            }
+        )
+    }
+
+    private var secondaryTint: Binding<RGBA> {
+        Binding(
+            get: { style.tintSecondary },
+            set: {
+                style.tintSecondary = $0
+                style.tintStrength = 1
+            }
+        )
+    }
+
+    private func layerBinding(
+        _ keyPath: WritableKeyPath<FolderStyle, NativeFolderLayerStyle>
+    ) -> Binding<NativeFolderLayerStyle> {
+        Binding(
+            get: { style[keyPath: keyPath] },
+            set: { style[keyPath: keyPath] = $0 }
+        )
+    }
+
     var body: some View {
-        SectionLabel(text: "Tint", symbol: "drop.fill")
-        TintWell(color: $style.tint, label: style.gradientEnabled ? "From" : "Color")
+        SectionLabel(text: style.separateLayerColors ? "Native Layers" : "Tint",
+                     symbol: style.separateLayerColors ? "square.3.layers.3d" : "drop.fill")
+
+        if style.baseIcon == .generic {
+            separateLayersToggle
+            if style.separateLayerColors { Divider() }
+        }
+
+        if style.baseIcon == .generic && style.separateLayerColors {
+            LayerFillEditor(title: "Back", symbol: "rectangle.stack",
+                            layer: layerBinding(\.backLayer), canHide: true)
+            LayerFillEditor(title: "Paper", symbol: "doc",
+                            layer: layerBinding(\.paperLayer), canHide: true)
+            LayerFillEditor(title: "Front", symbol: "rectangle.fill",
+                            layer: layerBinding(\.frontLayer), canHide: false)
+        } else {
+            linkedColorControls
+        }
+
+        if !(style.baseIcon == .generic && style.separateLayerColors) {
+            Divider()
+
+            SectionLabel(text: "Palettes", symbol: "swatchpalette")
+            ForEach(Palettes.groups) { group in
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(group.name)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                    SwatchGrid(swatches: group.swatches, selected: style.tint) { picked in
+                        style.tint = picked
+                        style.tintStrength = 1
+                    }
+                }
+            }
+        }
+
+        Divider()
+
+        SectionLabel(text: "Strength", symbol: "dial.medium")
+        LabeledSlider(title: "Tint amount", value: $style.tintStrength,
+                      range: 0...1, defaultValue: 1, format: "%.0f%%", displayScale: 100)
+        Text("Pull this down to blend back toward the stock macOS colors.")
+            .font(.system(size: 10))
+            .foregroundStyle(.tertiary)
+
+        Toggle(isOn: $style.matchLuminance) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Match brightness").font(.system(size: 12))
+                Text("Lets very dark and very pale colors actually land")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+    }
+
+    private var separateLayersToggle: some View {
+        Toggle(isOn: $style.separateLayerColors) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Customize layers separately").font(.system(size: 12))
+                Text("Independent fills for the back, paper, and front")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+        .onChange(of: style.separateLayerColors) { _, enabled in
+            guard enabled else { return }
+            let defaults = FolderStyle()
+            if style.backLayer == defaults.backLayer,
+               style.paperLayer == defaults.paperLayer,
+               style.frontLayer == defaults.frontLayer {
+                style.backLayer.tint = style.tint
+                style.backLayer.tintSecondary = style.tintSecondary
+                style.frontLayer.tint = style.tint
+                style.frontLayer.tintSecondary = style.tintSecondary
+                style.paperLayer.tint = .white
+            }
+            style.tintStrength = 1
+        }
+    }
+
+    @ViewBuilder
+    private var linkedColorControls: some View {
+        TintWell(color: primaryTint, label: style.gradientEnabled ? "From" : "Color")
 
         Toggle(isOn: $style.gradientEnabled) {
             Text("Gradient").font(.system(size: 12))
@@ -82,7 +196,7 @@ private struct ColorTab: View {
         .controlSize(.mini)
 
         if style.gradientEnabled {
-            TintWell(color: $style.tintSecondary, label: "To")
+            TintWell(color: secondaryTint, label: "To")
             LabeledSlider(title: "Angle", value: $style.gradientAngle,
                           range: 0...360, defaultValue: 90, format: "%.0f°",
                           symbol: "angle")
@@ -94,6 +208,7 @@ private struct ColorTab: View {
                         style.tint = RGBA(hex: preset.from) ?? style.tint
                         style.tintSecondary = RGBA(hex: preset.to) ?? style.tintSecondary
                         style.gradientAngle = preset.angle
+                        style.tintStrength = 1
                     } label: {
                         LinearGradient(
                             colors: [RGBA(hex: preset.from)!.color, RGBA(hex: preset.to)!.color],
@@ -112,41 +227,159 @@ private struct ColorTab: View {
                 }
             }
         }
+    }
+}
 
-        Divider()
+private struct LayerFillEditor: View {
+    var title: String
+    var symbol: String
+    @Binding var layer: NativeFolderLayerStyle
+    var canHide: Bool
+    @State private var dropTargeted = false
 
-        SectionLabel(text: "Palettes", symbol: "swatchpalette")
-        ForEach(Palettes.groups) { group in
-            VStack(alignment: .leading, spacing: 5) {
-                Text(group.name)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                SwatchGrid(swatches: group.swatches, selected: style.tint) { picked in
-                    style.tint = picked
+    private var primaryTint: Binding<RGBA> {
+        Binding(get: { layer.tint }, set: { layer.tint = $0 })
+    }
+
+    private var secondaryTint: Binding<RGBA> {
+        Binding(get: { layer.tintSecondary }, set: { layer.tintSecondary = $0 })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .frame(width: 16)
+                    .foregroundStyle(layer.enabled ? Color.accentColor : .secondary)
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                if canHide {
+                    Toggle("", isOn: $layer.enabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                        .help("Show or hide the \(title.lowercased()) layer")
+                } else {
+                    Text("Always on")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.tertiary)
                 }
             }
-        }
 
-        Divider()
+            if layer.enabled || !canHide {
+                Picker("", selection: $layer.fillKind) {
+                    ForEach(NativeLayerFillKind.allCases) { kind in
+                        Text(kind.title).tag(kind)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
 
-        SectionLabel(text: "Strength", symbol: "dial.medium")
-        LabeledSlider(title: "Tint amount", value: $style.tintStrength,
-                      range: 0...1, defaultValue: 1, format: "%.0f%%", displayScale: 100)
-        Text("Pull this down to blend back toward the stock macOS blue.")
-            .font(.system(size: 10))
-            .foregroundStyle(.tertiary)
-
-        Toggle(isOn: $style.matchLuminance) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Match brightness").font(.system(size: 12))
-                Text("Lets very dark and very pale colors actually land")
+                switch layer.fillKind {
+                case .color:
+                    colorControls
+                case .image:
+                    imageControls
+                }
+            } else {
+                Text("Hidden from the rendered folder")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
         }
-        .toggleStyle(.switch)
-        .controlSize(.mini)
+        .padding(11)
+        .background(.quaternary.opacity(0.28), in: RoundedRectangle(cornerRadius: 10))
+    }
 
+    private var colorControls: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            TintWell(color: primaryTint, label: layer.gradientEnabled ? "From" : "Color")
+            Toggle("Gradient", isOn: $layer.gradientEnabled)
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+                .font(.system(size: 11))
+            if layer.gradientEnabled {
+                TintWell(color: secondaryTint, label: "To")
+                LabeledSlider(title: "Angle", value: $layer.gradientAngle,
+                              range: 0...360, defaultValue: 90, format: "%.0f°",
+                              symbol: "angle")
+            }
+        }
+    }
+
+    private var imageControls: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(.black.opacity(0.12))
+                RoundedRectangle(cornerRadius: 7)
+                    .strokeBorder(dropTargeted ? Color.accentColor : .secondary.opacity(0.3),
+                                  style: StrokeStyle(lineWidth: dropTargeted ? 2 : 1,
+                                                     dash: [5, 3]))
+                if let data = layer.imageData, let image = NSImage(data: data) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .clipped()
+                        .padding(5)
+                } else {
+                    VStack(spacing: 4) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 18, weight: .light))
+                        Text("Drop an image")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(height: 82)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let url = urls.first else { return false }
+                return loadImage(from: url)
+            } isTargeted: { dropTargeted = $0 }
+
+            HStack(spacing: 6) {
+                Button("Choose…") { chooseImage() }
+                if layer.imageData != nil {
+                    Button("Clear") { layer.imageData = nil }
+                }
+            }
+            .controlSize(.small)
+
+            LabeledSlider(title: "Size", value: $layer.imageScale,
+                          range: 0.15...2.4, defaultValue: 1,
+                          format: "%.0f%%", displayScale: 100)
+            LabeledSlider(title: "Opacity", value: $layer.imageOpacity,
+                          range: 0...1, defaultValue: 1,
+                          format: "%.0f%%", displayScale: 100)
+            LabeledSlider(title: "Horizontal", value: $layer.imageOffsetX,
+                          range: -0.3...0.3, defaultValue: 0, format: "%+.2f")
+            LabeledSlider(title: "Vertical", value: $layer.imageOffsetY,
+                          range: -0.3...0.3, defaultValue: 0, format: "%+.2f")
+            LabeledSlider(title: "Rotation", value: $layer.imageRotation,
+                          range: -180...180, defaultValue: 0, format: "%.0f°")
+        }
+    }
+
+    private func chooseImage() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = IconImport.imageContentTypes
+        panel.canChooseDirectories = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        _ = loadImage(from: url)
+    }
+
+    @discardableResult
+    private func loadImage(from url: URL) -> Bool {
+        guard !IconImport.isICNS(url), let png = IconImport.pngData(from: url) else {
+            return false
+        }
+        layer.imageData = png
+        layer.fillKind = .image
+        return true
     }
 }
 

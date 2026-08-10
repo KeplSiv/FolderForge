@@ -148,6 +148,36 @@ struct FolderFill: Codable, Hashable {
     var fullIconData: Data?
 }
 
+enum NativeLayerFillKind: String, Codable, CaseIterable, Identifiable {
+    case color, image
+
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
+/// Independent appearance for one component of Apple's native folder artwork.
+struct NativeFolderLayerStyle: Codable, Hashable {
+    var enabled = true
+    var fillKind: NativeLayerFillKind = .color
+    var tint = RGBA(hex: "#2E9BFF")!
+    var gradientEnabled = false
+    var tintSecondary = RGBA(hex: "#8E5BFF")!
+    var gradientAngle: Double = 90
+    var imageData: Data?
+    var imageScale: Double = 1
+    var imageOpacity: Double = 1
+    var imageOffsetX: Double = 0
+    var imageOffsetY: Double = 0
+    var imageRotation: Double = 0
+
+    static func paper() -> NativeFolderLayerStyle {
+        var layer = NativeFolderLayerStyle()
+        layer.tint = .white
+        layer.tintSecondary = RGBA(hex: "#E8F4FF")!
+        return layer
+    }
+}
+
 /// How the overlay art is fused into the folder face.
 enum OverlayFinish: String, Codable, CaseIterable, Identifiable {
     /// Carved into the folder — tone-on-tone, feels like part of the icon. (Apple's own look.)
@@ -236,6 +266,14 @@ struct FolderStyle: Codable, Hashable, Identifiable {
     var gradientAngle: Double = 90          // degrees, 0 = left→right
     /// Push the folder's brightness toward the tint, so dark and pale colors really land.
     var matchLuminance = true
+    /// Native generic folders can optionally style Apple's component layers separately.
+    var separateLayerColors = false
+    var backFlapTint = RGBA(hex: "#2E9BFF")!
+    var paperTint = RGBA.white
+    var frontFlapTint = RGBA(hex: "#2E9BFF")!
+    var backLayer = NativeFolderLayerStyle()
+    var paperLayer = NativeFolderLayerStyle.paper()
+    var frontLayer = NativeFolderLayerStyle()
 
     // Tone
     var saturation: Double = 1.0            // 0…2
@@ -315,6 +353,25 @@ struct FolderStyle: Codable, Hashable, Identifiable {
         tintSecondary = value(.tintSecondary, blank.tintSecondary)
         gradientAngle = value(.gradientAngle, blank.gradientAngle)
         matchLuminance = value(.matchLuminance, blank.matchLuminance)
+        separateLayerColors = value(.separateLayerColors, blank.separateLayerColors)
+        backFlapTint = value(.backFlapTint, blank.backFlapTint)
+        paperTint = value(.paperTint, blank.paperTint)
+        frontFlapTint = value(.frontFlapTint, blank.frontFlapTint)
+        backLayer = value(.backLayer, {
+            var layer = blank.backLayer
+            layer.tint = backFlapTint
+            return layer
+        }())
+        paperLayer = value(.paperLayer, {
+            var layer = blank.paperLayer
+            layer.tint = paperTint
+            return layer
+        }())
+        frontLayer = value(.frontLayer, {
+            var layer = blank.frontLayer
+            layer.tint = frontFlapTint
+            return layer
+        }())
         saturation = value(.saturation, blank.saturation)
         brightness = value(.brightness, blank.brightness)
         contrast = value(.contrast, blank.contrast)
