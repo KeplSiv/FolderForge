@@ -6,7 +6,7 @@
 
 Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS files.
 
-[Download the latest DMG](https://github.com/KeplSiv/FolderForge/releases/latest) · macOS 14+
+[Download v1.0.6](https://github.com/KeplSiv/FolderForge/releases/tag/v1.0.6) · [Apple-notarized v1.0.5](https://github.com/KeplSiv/FolderForge/releases/tag/v1.0.5) · macOS 14+
 
 ![FolderForge icon examples](screenshots/hero.png)
 
@@ -15,6 +15,7 @@ Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS 
 ## Features
 
 - Color and gradient folder designs
+- Native macOS folder geometry with independent back, paper, and front layer fills
 - Image fills with optional overlays
 - SF Symbols, emoji, and text
 - Full ICNS import
@@ -35,7 +36,7 @@ Smart Style matches folders by name, path, marker files, or file types. For exam
 
 Download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
 
-FolderForge 1.0.5 is signed with a Developer ID certificate and notarized by Apple.
+FolderForge 1.0.6 contains the latest features but is not yet notarized by Apple. FolderForge 1.0.5 is signed with a Developer ID certificate and notarized by Apple.
 
 To build it yourself:
 
