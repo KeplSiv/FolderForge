@@ -35,7 +35,7 @@ Smart Style matches folders by name, path, marker files, or file types. For exam
 
 Download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
 
-The GitHub build is currently ad-hoc signed rather than notarized. On first launch, right-click FolderForge, choose **Open**, then confirm.
+FolderForge 1.0.5 is signed with a Developer ID certificate and notarized by Apple.
 
 To build it yourself:
 
