@@ -215,7 +215,7 @@ final class FolderStyleLayerTests: XCTestCase {
     }
 }
 
-final class AppIconAndQuickPresetTests: XCTestCase {
+final class ApplicationIconTests: XCTestCase {
     func testApplicationBundleIconCanBeNormalized() throws {
         let app = URL(fileURLWithPath: "/System/Applications/Calculator.app", isDirectory: true)
         guard FileManager.default.fileExists(atPath: app.path) else {
@@ -243,44 +243,6 @@ final class AppIconAndQuickPresetTests: XCTestCase {
         XCTAssertFalse(decoded.overlay.isEmpty)
     }
 
-    func testQuickPresetStoresAnIndependentSnapshot() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        let url = directory.appendingPathComponent("quick-presets.json")
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let store = QuickPresetStore(storeURL: url)
-        var style = FolderStyle()
-        style.name = "Figma"
-        style.overlay.kind = .appIcon
-        style.overlay.sourceAppName = "Figma"
-        store.assign(style, to: 4)
-
-        style.name = "Changed later"
-        XCTAssertEqual(store.style(at: 4)?.name, "Figma")
-
-        let reloaded = QuickPresetStore(storeURL: url)
-        XCTAssertEqual(reloaded.style(at: 4)?.overlay.sourceAppName, "Figma")
-        XCTAssertNil(reloaded.style(at: 11))
-    }
-
-    func testConfiguredQuickPresetsExcludeEmptySlotsAndKeepOrder() throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
-
-        let store = QuickPresetStore(storeURL: directory.appendingPathComponent("quick-presets.json"))
-        var first = BuiltInPresets.all[0]
-        first.name = "First"
-        var third = BuiltInPresets.all[1]
-        third.name = "Third"
-        store.assign(third, to: 3)
-        store.assign(first, to: 1)
-
-        XCTAssertEqual(store.configuredSlots.map(\.id), [1, 3])
-        XCTAssertEqual(store.configuredSlots.compactMap(\.style?.name), ["First", "Third"])
-    }
 }
 
 final class FinishRenderingTests: XCTestCase {

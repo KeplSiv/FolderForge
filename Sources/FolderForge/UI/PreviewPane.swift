@@ -221,6 +221,7 @@ struct PreviewPane: View {
 struct PresetGallery: View {
     @Bindable var state: AppState
     @State private var showingUserPresets = false
+    @State private var showingReorder = false
     @State private var renaming: FolderStyle?
     @State private var renameText = ""
 
@@ -240,6 +241,9 @@ struct PresetGallery: View {
         .background(Color(nsColor: .controlBackgroundColor).opacity(0.4))
         .sheet(item: $renaming) { preset in
             renameSheet(preset)
+        }
+        .sheet(isPresented: $showingReorder) {
+            ReorderStylesSheet(store: state.presets)
         }
     }
 
@@ -266,6 +270,17 @@ struct PresetGallery: View {
             .frame(width: showLabels ? 220 : 150)
 
             Spacer(minLength: 4)
+
+            if showingUserPresets {
+                Button {
+                    showingReorder = true
+                } label: {
+                    adaptiveLabel("Reorder", "arrow.up.arrow.down", showLabels)
+                }
+                .buttonStyle(.accessoryBar)
+                .disabled(state.presets.userPresets.count < 2)
+                .help("Reorder My Styles everywhere they appear")
+            }
 
             Button {
                 state.saveCurrentAsPreset()
@@ -383,5 +398,70 @@ struct PresetGallery: View {
             }
         }
         .padding(20)
+    }
+}
+
+private struct ReorderStylesSheet: View {
+    @Bindable var store: PresetStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Reorder My Styles")
+                    .font(.title3.weight(.semibold))
+                Text("Drag rows or use the arrow buttons. This order is also used in the Finder style chooser.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            List {
+                ForEach(Array(store.userPresets.enumerated()), id: \.element.id) { index, preset in
+                    HStack(spacing: 12) {
+                        Text(String(format: "%02d", index + 1))
+                            .font(.system(.caption, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 24, alignment: .trailing)
+
+                        FolderIconView(style: preset, side: 38)
+
+                        Text(preset.name)
+                            .font(.body.weight(.medium))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Button {
+                            store.move(preset, by: -1)
+                        } label: {
+                            Image(systemName: "chevron.up")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(index == 0)
+                        .help("Move up")
+
+                        Button {
+                            store.move(preset, by: 1)
+                        } label: {
+                            Image(systemName: "chevron.down")
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(index == store.userPresets.count - 1)
+                        .help("Move down")
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onMove(perform: store.move)
+            }
+            .listStyle(.inset)
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 470, height: 460)
     }
 }

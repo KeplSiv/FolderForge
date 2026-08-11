@@ -52,7 +52,6 @@ final class AppState {
     var style = FolderStyle()
 
     var presets = PresetStore()
-    var quickPresets = QuickPresetStore()
     var smartRules = SmartRuleStore()
 
     var previewScale: Double = 1.0
@@ -134,21 +133,26 @@ final class AppState {
 
     func addFolders(_ urls: [URL]) {
         var added = 0
+        var requestedPaths = Set<String>()
         for url in urls {
             var isDirectory: ObjCBool = false
             guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory),
                   isDirectory.boolValue else { continue }
             let standardized = url.standardizedFileURL
+            requestedPaths.insert(standardized.path)
             guard !folders.contains(where: { $0.url == standardized }) else { continue }
             folders.append(FolderItem(url: standardized))
             added += 1
         }
-        if added > 0 {
-            // Selecting them is enough — the selection observer adopts whatever design the
-            // folders already carry, and keeps `styleAtLoad` honest while doing it.
-            selection = Set(folders.suffix(added).map(\.id))
+
+        let requestedFolders = folders.filter { requestedPaths.contains($0.url.path) }
+        if !requestedFolders.isEmpty {
+            // Focus every requested folder, including ones already present in the sidebar.
+            selection = Set(requestedFolders.map(\.id))
             syncStyleToSelection()
-        } else if !urls.isEmpty {
+        }
+
+        if added == 0, !urls.isEmpty {
             toast = Toast(kind: .info, message: "Already in the list")
         }
     }

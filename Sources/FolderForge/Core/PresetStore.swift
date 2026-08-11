@@ -61,6 +61,14 @@ final class PresetStore {
         save()
     }
 
+    func move(_ style: FolderStyle, by offset: Int) {
+        guard let source = userPresets.firstIndex(where: { $0.id == style.id }) else { return }
+        let destination = source + offset
+        guard userPresets.indices.contains(destination) else { return }
+        userPresets.swapAt(source, destination)
+        save()
+    }
+
     private func uniqueName(from name: String, excluding id: UUID? = nil) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let base = trimmed.isEmpty ? "Untitled" : trimmed

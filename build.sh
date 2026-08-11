@@ -108,7 +108,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 
     <key>NSServices</key>
     <array>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Apply Preset…</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
+        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Choose Style…</string></dict><key>NSMessage</key><string>chooseFolderStyle</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
         <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Restore Original Icon</string></dict><key>NSMessage</key><string>restoreFolderIcons</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
     </array>
 

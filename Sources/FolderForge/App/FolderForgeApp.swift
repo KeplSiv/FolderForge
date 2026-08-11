@@ -120,7 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 final class FinderServicesProvider: NSObject {
-    @objc func applyQuickPreset(
+    @objc func chooseFolderStyle(
         _ pasteboard: NSPasteboard,
         userData: String,
         error errorPointer: AutoreleasingUnsafeMutablePointer<NSString?>
@@ -131,14 +131,12 @@ final class FinderServicesProvider: NSObject {
             return
         }
 
-        let configured = QuickPresetStore().configuredSlots
-        guard !configured.isEmpty else {
-            errorPointer.pointee = "No Finder presets are configured. Set one in FolderForge Settings." as NSString
-            return
+        switch chooseStyle(for: folders) {
+        case .apply(let style):
+            apply(style, to: folders, error: errorPointer)
+        case .cancel:
+            break
         }
-
-        guard let style = chooseStyle(from: configured, folderCount: folders.count) else { return }
-        apply(style, to: folders, error: errorPointer)
     }
 
     @objc func restoreFolderIcons(
@@ -152,6 +150,13 @@ final class FinderServicesProvider: NSObject {
             return
         }
 
+        restore(folders, error: errorPointer)
+    }
+
+    private func restore(
+        _ folders: [URL],
+        error errorPointer: AutoreleasingUnsafeMutablePointer<NSString?>
+    ) {
         let failures = IconApplier.resetBatch(folders).filter { !$0.succeeded }
         if let first = failures.first {
             errorPointer.pointee = serviceError(failures: failures.count, total: folders.count, first: first)
@@ -174,33 +179,54 @@ final class FinderServicesProvider: NSObject {
         }
     }
 
-    private func chooseStyle(from slots: [QuickPresetSlot], folderCount: Int) -> FolderStyle? {
+    private func chooseStyle(for folders: [URL]) -> FinderStyleChooserResult {
         if !Thread.isMainThread {
             return DispatchQueue.main.sync {
-                chooseStyle(from: slots, folderCount: folderCount)
+                chooseStyle(for: folders)
             }
         }
 
-        let alert = NSAlert()
-        alert.messageText = "Apply FolderForge Preset"
-        alert.informativeText = "Choose a preset for \(folderCount) selected folder\(folderCount == 1 ? "" : "s")."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "Apply")
-        alert.addButton(withTitle: "Cancel")
-
-        let picker = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 28))
-        for slot in slots {
-            guard let style = slot.style else { continue }
-            let name = style.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            picker.addItem(withTitle: name.isEmpty ? "Preset \(slot.id)" : name)
+        let presets = PresetStore()
+        var result = FinderStyleChooserResult.cancel
+        var panel: NSPanel!
+        let chooser = FinderStyleChooser(
+            folders: folders,
+            userStyles: presets.userPresets,
+            builtInStyles: presets.builtIn,
+            restoreOriginal: { [weak self] in
+                self?.restoreErrorMessage(for: folders)
+            }
+        ) { choice in
+            result = choice
+            NSApp.stopModal()
+            panel.orderOut(nil)
         }
-        alert.accessoryView = picker
+
+        panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 720, height: 610),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        panel.title = "Choose Folder Style"
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isReleasedWhenClosed = false
+        panel.contentView = NSHostingView(rootView: chooser)
+        panel.center()
+        panel.standardWindowButton(.closeButton)?.target = NSApp
+        panel.standardWindowButton(.closeButton)?.action = #selector(NSApplication.abortModal)
 
         NSApp.activate(ignoringOtherApps: true)
-        guard alert.runModal() == .alertFirstButtonReturn,
-              slots.indices.contains(picker.indexOfSelectedItem)
-        else { return nil }
-        return slots[picker.indexOfSelectedItem].style
+        NSApp.runModal(for: panel)
+        panel.orderOut(nil)
+        return result
+    }
+
+    private func restoreErrorMessage(for folders: [URL]) -> String? {
+        let failures = IconApplier.resetBatch(folders).filter { !$0.succeeded }
+        guard let first = failures.first else { return nil }
+        return serviceError(failures: failures.count, total: folders.count, first: first) as String
     }
 
     private func folderURLs(from pasteboard: NSPasteboard) -> [URL] {
@@ -234,6 +260,7 @@ extension Notification.Name {
 
 struct SettingsView: View {
     @Bindable var state: AppState
+    @State private var finderSetupExpanded = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -304,66 +331,36 @@ struct SettingsView: View {
                 Button("Import Style File…") { state.importStyleFile() }
             }
 
-            Section("Finder Quick Presets") {
-                Text("Assign up to ten styles here. In Finder, right-click selected folders and choose Services › FolderForge: Apply Preset… to pick from configured styles by name.")
+            Section("Finder Style Chooser") {
+                Text("Open a compact visual style picker directly from Finder. My Styles appear first, followed by every built-in style.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
 
-                ForEach(state.quickPresets.slots) { slot in
-                    HStack(spacing: 10) {
-                        Text(String(format: "%02d", slot.id))
-                            .font(.system(.body, design: .monospaced, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, alignment: .leading)
+                DisclosureGroup(isExpanded: $finderSetupExpanded) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        setupStep(1, "Save any designs you want to My Styles. Built-in styles are included automatically.")
+                        setupStep(2, "Open Keyboard Settings, click Keyboard Shortcuts…, then select Services › Files and Folders.")
+                        setupStep(3, "Enable FolderForge: Choose Style… and FolderForge: Restore Original Icon.")
+                        setupStep(4, "In Finder, right-click folders and choose Services › FolderForge: Choose Style…")
 
-                        if let selected = slot.style {
-                            FolderIconView(style: selected, side: 28)
-                                .frame(width: 28, height: 28)
-                            Text(selected.name)
-                                .lineLimit(1)
-                            Spacer()
-                        } else {
-                            Image(systemName: "square.dashed")
-                                .foregroundStyle(.tertiary)
-                                .frame(width: 28, height: 28)
-                            Text("Not configured")
-                                .foregroundStyle(.secondary)
-                            Spacer()
+                        Button("Open Keyboard Settings") {
+                            openKeyboardSettings()
                         }
-
-                        Menu("Choose Style") {
-                            Section("Built-in") {
-                                ForEach(state.presets.builtIn) { preset in
-                                    Button(preset.name) {
-                                        state.quickPresets.assign(preset, to: slot.id)
-                                    }
-                                }
-                            }
-                            if !state.presets.userPresets.isEmpty {
-                                Section("My Styles") {
-                                    ForEach(state.presets.userPresets) { preset in
-                                        Button(preset.name) {
-                                            state.quickPresets.assign(preset, to: slot.id)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .frame(width: 112)
-
-                        Button {
-                            state.quickPresets.clear(slot.id)
-                        } label: {
-                            Image(systemName: "xmark.circle")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
-                        .disabled(slot.style == nil)
-                        .help("Clear this slot")
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top, 2)
                     }
+                    .padding(.top, 8)
+                } label: {
+                    Label("Set Up Finder Shortcuts", systemImage: "keyboard.badge.ellipsis")
+                        .fontWeight(.semibold)
                 }
 
-                Text("Only configured styles appear in the Finder preset chooser. You can assign a keyboard shortcut to the service in System Settings › Keyboard › Keyboard Shortcuts.")
+                LabeledContent("Available in Finder") {
+                    Text("\(state.presets.userPresets.count) My Styles · \(state.presets.builtIn.count) built-in")
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("The chooser updates automatically when you save, rename, or remove a style. You can also assign a keyboard combination to either service in Keyboard Shortcuts.")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
@@ -371,5 +368,25 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 720, height: 650)
     }
-}
+    }
+
+    private func setupStep(_ number: Int, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("\(number)")
+                .font(.system(.caption, design: .rounded, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 20, height: 20)
+                .background(.blue, in: Circle())
+            Text(text)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func openKeyboardSettings() {
+        guard let keyboardSettings = URL(
+            string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
+        ) else { return }
+        NSWorkspace.shared.open(keyboardSettings)
+    }
 }
