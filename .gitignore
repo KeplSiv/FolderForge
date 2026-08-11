@@ -12,7 +12,6 @@ Package.resolved
 
 # Local scratch / not part of the release
 testbed/
-Tests/
 docs/
 .vscode/
 .idea/

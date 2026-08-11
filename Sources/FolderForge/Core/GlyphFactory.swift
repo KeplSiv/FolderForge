@@ -19,6 +19,11 @@ enum GlyphFactory {
             let weight = style.symbolWeight.nsWeight
             let font = NSFont.systemFont(ofSize: CGFloat(side) * 0.6, weight: weight)
             return text(style.overlay.text, side: side, font: font)
+        case .appIcon:
+            guard let data = style.overlay.imageData,
+                  let image = NSImage(data: data)
+            else { return nil }
+            return rasterizeFitting(image, side: side)
         case .image, .icns:
             return nil
         }
@@ -163,6 +168,14 @@ enum GlyphFactory {
         }
         let rep = NSBitmapImageRep(cgImage: cg)
         rep.size = image.size
+        return rep.representation(using: .png, properties: [:])
+    }
+
+    /// Produces a predictable, high-resolution PNG from images whose logical size may be small.
+    static func pngData(from image: NSImage, side: Int) -> Data? {
+        guard let cg = rasterizeFitting(image, side: side) else { return nil }
+        let rep = NSBitmapImageRep(cgImage: cg)
+        rep.size = NSSize(width: side, height: side)
         return rep.representation(using: .png, properties: [:])
     }
 }

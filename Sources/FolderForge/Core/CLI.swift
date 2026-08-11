@@ -117,6 +117,13 @@ enum CLI {
             style.overlay.kind = .text
             style.overlay.text = text
         }
+        if let path = options["app"],
+           let imported = IconImport.applicationIcon(from: URL(fileURLWithPath: path)) {
+            style.overlay.kind = .appIcon
+            style.overlay.imageData = imported.pngData
+            style.overlay.sourceAppName = imported.name
+            style.finish = .natural
+        }
         if let path = options["image"],
            let png = IconImport.pngData(from: URL(fileURLWithPath: path)) {
             if IconImport.isICNS(URL(fileURLWithPath: path)) {
@@ -367,7 +374,7 @@ enum CLI {
             .compactMap { FolderScanner.resolve(path: String($0)) }
         let styleKeys: Set<String> = [
             "preset", "style", "color", "color2", "angle", "symbol", "emoji", "text",
-            "image", "finish", "base", "scale", "opacity", "saturation", "brightness",
+            "image", "app", "finish", "base", "scale", "opacity", "saturation", "brightness",
             "contrast",
         ]
         let styleOverride = options.flags.keys.contains { styleKeys.contains($0) }
@@ -410,6 +417,7 @@ enum CLI {
             case .symbol: "symbol:\(style.overlay.symbolName)"
             case .emoji: "emoji:\(style.overlay.emoji)"
             case .text: "text:\(style.overlay.text)"
+            case .appIcon: "app icon:\(style.overlay.sourceAppName ?? "embedded")"
             case .image: "image"
             case .icns: "icns"
             }
@@ -496,6 +504,7 @@ enum CLI {
           --symbol <sf.symbol>    SF Symbol overlay
           --emoji <emoji>         emoji overlay
           --text <string>         text overlay
+          --app <file.app>        application icon overlay
           --image <file>          image fill, or full icon when the file is ICNS
           --finish <name>         engraved | tinted | natural | stamped | raised
           --base <name>           generic | documents | downloads | …

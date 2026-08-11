@@ -379,6 +379,13 @@ enum IconRenderer {
 
         let alpha = CGFloat(style.overlayOpacity)
         let unit = side / 1024  // so offsets/blurs scale with canvas size
+        let detailedArtwork = style.overlay.kind.preservesArtworkDetail
+
+        func coloredGlyph(_ color: NSColor) -> CGImage? {
+            detailedArtwork
+                ? colorizePreservingLuminance(glyph, with: color)
+                : tint(glyph, with: color)
+        }
 
         switch style.finish {
         case .engraved:
@@ -395,13 +402,18 @@ enum IconRenderer {
                 ctx.setAlpha(0.22 * alpha)
                 ctx.draw(blurred, in: frame.offsetBy(dx: 0, dy: -5 * unit))
             }
-            if let fill = tint(glyph, with: style.overlayColor.nsColor) {
+            if let fill = coloredGlyph(style.overlayColor.nsColor) {
                 ctx.setBlendMode(.softLight)
                 ctx.setAlpha(alpha)
                 ctx.draw(fill, in: frame)
                 ctx.setBlendMode(.softLight)
                 ctx.setAlpha(alpha * 0.75)
                 ctx.draw(fill, in: frame)
+                if detailedArtwork {
+                    ctx.setBlendMode(.multiply)
+                    ctx.setAlpha(alpha * 0.16)
+                    ctx.draw(fill, in: frame)
+                }
             }
 
         case .tinted:
@@ -411,16 +423,19 @@ enum IconRenderer {
                 ctx.setAlpha(0.22 * alpha)
                 ctx.draw(blurred, in: frame.offsetBy(dx: 0, dy: -4 * unit))
             }
-            if let fill = tint(glyph, with: style.overlayColor.nsColor) {
+            if let fill = coloredGlyph(style.overlayColor.nsColor) {
                 ctx.setBlendMode(.normal)
                 ctx.setAlpha(alpha)
                 ctx.draw(fill, in: frame)
             }
 
         case .stamped:
-            if let fill = tint(glyph, with: style.overlayColor.nsColor) {
+            // Multiply with a light color is effectively invisible. Keep the selected hue,
+            // but force it into a useful ink range so every saved preset remains visible.
+            let ink = readableStampedInk(style.overlayColor.nsColor)
+            if let fill = coloredGlyph(ink) {
                 ctx.setBlendMode(.multiply)
-                ctx.setAlpha(alpha)
+                ctx.setAlpha(alpha * 0.92)
                 ctx.draw(fill, in: frame)
             }
 
@@ -431,12 +446,22 @@ enum IconRenderer {
                 ctx.setAlpha(0.35 * alpha)
                 ctx.draw(blurred, in: frame.offsetBy(dx: 0, dy: -8 * unit))
             }
-            if let fill = tint(glyph, with: style.overlayColor.nsColor) {
+            if let lowerEdge = tint(glyph, with: NSColor.black) {
+                ctx.setBlendMode(.multiply)
+                ctx.setAlpha(alpha * 0.22)
+                ctx.draw(lowerEdge, in: frame.offsetBy(dx: 0, dy: -3 * unit))
+            }
+            if let upperEdge = tint(glyph, with: NSColor.white) {
+                ctx.setBlendMode(.plusLighter)
+                ctx.setAlpha(alpha * 0.38)
+                ctx.draw(upperEdge, in: frame.offsetBy(dx: 0, dy: 3 * unit))
+            }
+            if let fill = coloredGlyph(style.overlayColor.nsColor) {
                 ctx.setBlendMode(.normal)
                 ctx.setAlpha(alpha)
                 ctx.draw(fill, in: frame)
                 ctx.setBlendMode(.plusLighter)
-                ctx.setAlpha(alpha * 0.25)
+                ctx.setAlpha(alpha * 0.14)
                 ctx.draw(fill, in: frame)
             }
 
@@ -486,6 +511,39 @@ enum IconRenderer {
         ctx.setFillColor((color.usingColorSpace(.sRGB) ?? color).cgColor)
         ctx.fill(rect)
         return ctx.makeImage()
+    }
+
+    /// Applies a monochrome color while retaining the source artwork's highlights, shadows
+    /// and interior boundaries. Using alpha alone turns every app icon into a blank squircle.
+    static func colorizePreservingLuminance(_ image: CGImage, with color: NSColor) -> CGImage? {
+        guard let ctx = makeContext(pixels: max(image.width, image.height)) else { return nil }
+        let rect = CGRect(x: 0, y: 0, width: ctx.width, height: ctx.height)
+        ctx.draw(image, in: rect)
+
+        ctx.saveGState()
+        ctx.setBlendMode(.color)
+        ctx.setFillColor((color.usingColorSpace(.sRGB) ?? color).cgColor)
+        ctx.fill(rect)
+        ctx.restoreGState()
+
+        ctx.saveGState()
+        ctx.setBlendMode(.destinationIn)
+        ctx.draw(image, in: rect)
+        ctx.restoreGState()
+        return ctx.makeImage()
+    }
+
+    static func readableStampedInk(_ color: NSColor) -> NSColor {
+        let source = color.usingColorSpace(.sRGB) ?? color
+        let brightness = max(source.redComponent, source.greenComponent, source.blueComponent)
+        guard brightness > 0.42 else { return source }
+        let scale = 0.30 / max(brightness, 0.001)
+        return NSColor(
+            srgbRed: source.redComponent * scale,
+            green: source.greenComponent * scale,
+            blue: source.blueComponent * scale,
+            alpha: source.alphaComponent
+        )
     }
 
     static func blur(_ image: CGImage, radius: CGFloat) -> CGImage? {

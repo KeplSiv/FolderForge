@@ -672,7 +672,7 @@ private struct IconTab: View {
     @State private var dragStartOffset: CGPoint?
 
     private var style: Binding<FolderStyle> { $state.style }
-    private let overlayKinds: [OverlayKind] = [.none, .symbol, .emoji, .text]
+    private let overlayKinds: [OverlayKind] = [.none, .symbol, .emoji, .text, .appIcon]
 
     private enum ImagePlacementMode: String, CaseIterable, Identifiable {
         case fit, fill
@@ -707,7 +707,7 @@ private struct IconTab: View {
         .labelsHidden()
         .onChange(of: state.style.overlay.kind) { _, kind in
             switch kind {
-            case .emoji:
+            case .emoji, .appIcon:
                 if state.style.finish.isMasked { state.style.finish = .natural }
             case .symbol, .text:
                 if state.style.finish == .natural { state.style.finish = .engraved }
@@ -769,6 +769,9 @@ private struct IconTab: View {
                 }
             }
             .controlSize(.small)
+
+        case .appIcon:
+            applicationIconWell
 
         case .image, .icns:
             Text("Images and ICNS imports now live in the Fill tab.")
@@ -832,6 +835,79 @@ private struct IconTab: View {
                           range: -180...180, defaultValue: 0, format: "%.0f°",
                           symbol: "rotate.right")
         }
+    }
+
+    private var applicationIconWell: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.quaternary.opacity(0.4))
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.secondary.opacity(0.3))
+
+                if let data = state.style.overlay.imageData,
+                   let image = NSImage(data: data) {
+                    VStack(spacing: 6) {
+                        Image(nsImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 72, height: 72)
+                        if let name = state.style.overlay.sourceAppName {
+                            Text(name)
+                                .font(.system(size: 11, weight: .medium))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(10)
+                } else {
+                    VStack(spacing: 5) {
+                        Image(systemName: "app.dashed")
+                            .font(.system(size: 24, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text("Choose an application")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(height: 126)
+
+            HStack(spacing: 6) {
+                Button("Choose Application…") { chooseApplication() }
+                if state.style.overlay.imageData != nil {
+                    Button("Clear") {
+                        state.style.overlay.imageData = nil
+                        state.style.overlay.sourceAppName = nil
+                    }
+                }
+            }
+            .controlSize(.small)
+
+            Text("The app icon is embedded in the preset and remains available if the app moves.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func chooseApplication() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = IconImport.applicationContentTypes
+        panel.canChooseDirectories = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let imported = IconImport.applicationIcon(from: url) else {
+            state.toast = Toast(kind: .failure, message: "Couldn't read that application icon")
+            return
+        }
+
+        state.style.overlay.kind = .appIcon
+        state.style.overlay.imageData = imported.pngData
+        state.style.overlay.sourceAppName = imported.name
+        state.style.finish = .natural
+        state.style.overlayShadow = true
+        setImagePlacement(scale: 0.42)
+        state.toast = Toast(kind: .success, message: "Using the \(imported.name) icon")
     }
 
     private var importedFullIconWell: some View {

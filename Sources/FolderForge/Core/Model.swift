@@ -110,7 +110,7 @@ enum BaseIconKind: String, Codable, CaseIterable, Identifiable {
 // MARK: - Overlay
 
 enum OverlayKind: String, Codable, CaseIterable, Identifiable {
-    case none, symbol, emoji, text, image, icns
+    case none, symbol, emoji, text, appIcon, image, icns
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -118,8 +118,18 @@ enum OverlayKind: String, Codable, CaseIterable, Identifiable {
         case .symbol: "Symbol"
         case .emoji: "Emoji"
         case .text: "Text"
+        case .appIcon: "App Icon"
         case .image: "Image"
         case .icns: "ICNS"
+        }
+    }
+
+    /// Photos, emoji and application icons need their internal luminance preserved when a
+    /// monochrome finish is applied. Symbols and text are already template-shaped masks.
+    var preservesArtworkDetail: Bool {
+        switch self {
+        case .emoji, .appIcon, .image: true
+        case .none, .symbol, .text, .icns: false
         }
     }
 }
@@ -204,7 +214,7 @@ enum OverlayFinish: String, Codable, CaseIterable, Identifiable {
     var help: String {
         switch self {
         case .engraved: "Carved into the folder face. Matches Apple's own folder icons."
-        case .tinted: "Flat fill in a color you pick."
+        case .tinted: "A clean monochrome treatment in a color you pick."
         case .natural: "Keeps the artwork's own colors. Best for emoji and photos."
         case .stamped: "Dark ink pressed into the folder."
         case .raised: "Bright and glossy, floating above the folder."
@@ -221,6 +231,8 @@ struct Overlay: Codable, Hashable {
     var text: String = "AB"
     /// PNG bytes, embedded so a preset stays valid after the source file moves.
     var imageData: Data?
+    /// Display-only source name retained with imported application artwork.
+    var sourceAppName: String?
 
     init() {}
 
@@ -236,6 +248,7 @@ struct Overlay: Codable, Hashable {
         emoji = value(.emoji, blank.emoji)
         text = value(.text, blank.text)
         imageData = (try? container.decodeIfPresent(Data.self, forKey: .imageData)) ?? nil
+        sourceAppName = (try? container.decodeIfPresent(String.self, forKey: .sourceAppName)) ?? nil
     }
 
     var isEmpty: Bool {
@@ -244,6 +257,7 @@ struct Overlay: Codable, Hashable {
         case .symbol: symbolName.isEmpty
         case .emoji: emoji.isEmpty
         case .text: text.isEmpty
+        case .appIcon: imageData == nil
         case .image: imageData == nil
         case .icns: false
         }

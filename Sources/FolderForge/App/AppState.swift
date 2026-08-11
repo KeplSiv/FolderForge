@@ -52,6 +52,7 @@ final class AppState {
     var style = FolderStyle()
 
     var presets = PresetStore()
+    var quickPresets = QuickPresetStore()
     var smartRules = SmartRuleStore()
 
     var previewScale: Double = 1.0
