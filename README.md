@@ -8,6 +8,8 @@ Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS 
 
 [Download notarized v1.0.6](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.6/FolderForge-1.0.6.dmg) · macOS 14+
 
+<a href="https://www.producthunt.com/products/folderforge/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-folderforge" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1290232&theme=dark" alt="FolderForge - Customize Mac folders with colors, icons, presets, and rules | Product Hunt" width="250" height="54" /></a>
+
 ![FolderForge icon examples](screenshots/hero.png)
 
 </div>
