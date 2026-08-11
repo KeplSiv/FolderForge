@@ -27,6 +27,10 @@ final class QuickPresetStore {
         slots.first { $0.id == slot }?.style
     }
 
+    var configuredSlots: [QuickPresetSlot] {
+        slots.filter { $0.style != nil }
+    }
+
     func assign(_ style: FolderStyle, to slot: Int) {
         guard let index = slots.firstIndex(where: { $0.id == slot }) else { return }
         var snapshot = style

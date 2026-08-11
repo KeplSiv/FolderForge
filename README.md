@@ -23,12 +23,19 @@ Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS 
 - Application icons as folder overlays
 - Full ICNS import
 - Reusable presets and recursive folder imports
-- Finder quick presets for applying saved styles from the Services menu
+- Finder preset chooser that lists only configured styles by name
 - Smart Style rules for applying designs across a folder tree
 - Restore original icons and undo the last batch
 - Native SwiftUI app with no third-party dependencies
 
 ![FolderForge editor](screenshots/main-window.png)
+
+### Finder preset setup
+
+1. Save a style, then assign it under **FolderForge › Settings › Finder Quick Presets**.
+2. Open **System Settings › Keyboard › Keyboard Shortcuts › Services › Files and Folders**.
+3. Enable **FolderForge: Apply Preset…** and **FolderForge: Restore Original Icon**.
+4. Right-click folders in Finder, open **Services**, and choose a configured preset by name.
 
 ## Smart Style
 

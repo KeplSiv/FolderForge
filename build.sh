@@ -108,16 +108,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 
     <key>NSServices</key>
     <array>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 1</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>1</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 2</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>2</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 3</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>3</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 4</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>4</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 5</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>5</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 6</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>6</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 7</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>7</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 8</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>8</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 9</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>9</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
-        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Quick Preset 10</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSUserData</key><string>10</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
+        <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Apply Preset…</string></dict><key>NSMessage</key><string>applyQuickPreset</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
         <dict><key>NSMenuItem</key><dict><key>default</key><string>FolderForge: Restore Original Icon</string></dict><key>NSMessage</key><string>restoreFolderIcons</string><key>NSSendFileTypes</key><array><string>public.folder</string></array></dict>
     </array>
 

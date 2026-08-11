@@ -125,14 +125,20 @@ final class FinderServicesProvider: NSObject {
         userData: String,
         error errorPointer: AutoreleasingUnsafeMutablePointer<NSString?>
     ) {
-        guard let slot = Int(userData),
-              let style = QuickPresetStore().style(at: slot)
-        else {
-            errorPointer.pointee = "Quick Preset \(userData) is not configured. Set it in FolderForge Settings." as NSString
+        let folders = folderURLs(from: pasteboard)
+        guard !folders.isEmpty else {
+            errorPointer.pointee = "Select one or more folders in Finder first." as NSString
             return
         }
 
-        apply(style, to: folderURLs(from: pasteboard), error: errorPointer)
+        let configured = QuickPresetStore().configuredSlots
+        guard !configured.isEmpty else {
+            errorPointer.pointee = "No Finder presets are configured. Set one in FolderForge Settings." as NSString
+            return
+        }
+
+        guard let style = chooseStyle(from: configured, folderCount: folders.count) else { return }
+        apply(style, to: folders, error: errorPointer)
     }
 
     @objc func restoreFolderIcons(
@@ -166,6 +172,35 @@ final class FinderServicesProvider: NSObject {
         if let first = failures.first {
             errorPointer.pointee = serviceError(failures: failures.count, total: folders.count, first: first)
         }
+    }
+
+    private func chooseStyle(from slots: [QuickPresetSlot], folderCount: Int) -> FolderStyle? {
+        if !Thread.isMainThread {
+            return DispatchQueue.main.sync {
+                chooseStyle(from: slots, folderCount: folderCount)
+            }
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Apply FolderForge Preset"
+        alert.informativeText = "Choose a preset for \(folderCount) selected folder\(folderCount == 1 ? "" : "s")."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Apply")
+        alert.addButton(withTitle: "Cancel")
+
+        let picker = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 28))
+        for slot in slots {
+            guard let style = slot.style else { continue }
+            let name = style.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            picker.addItem(withTitle: name.isEmpty ? "Preset \(slot.id)" : name)
+        }
+        alert.accessoryView = picker
+
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn,
+              slots.indices.contains(picker.indexOfSelectedItem)
+        else { return nil }
+        return slots[picker.indexOfSelectedItem].style
     }
 
     private func folderURLs(from pasteboard: NSPasteboard) -> [URL] {
@@ -270,7 +305,7 @@ struct SettingsView: View {
             }
 
             Section("Finder Quick Presets") {
-                Text("Right-click selected folders in Finder, open Services, then choose a FolderForge quick preset. Each slot keeps its own snapshot of the style.")
+                Text("Assign up to ten styles here. In Finder, right-click selected folders and choose Services › FolderForge: Apply Preset… to pick from configured styles by name.")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
 
@@ -328,7 +363,7 @@ struct SettingsView: View {
                     }
                 }
 
-                Text("You can assign keyboard shortcuts to these Services in System Settings › Keyboard › Keyboard Shortcuts.")
+                Text("Only configured styles appear in the Finder preset chooser. You can assign a keyboard shortcut to the service in System Settings › Keyboard › Keyboard Shortcuts.")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }

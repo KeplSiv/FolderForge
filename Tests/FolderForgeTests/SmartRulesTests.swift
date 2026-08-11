@@ -263,6 +263,24 @@ final class AppIconAndQuickPresetTests: XCTestCase {
         XCTAssertEqual(reloaded.style(at: 4)?.overlay.sourceAppName, "Figma")
         XCTAssertNil(reloaded.style(at: 11))
     }
+
+    func testConfiguredQuickPresetsExcludeEmptySlotsAndKeepOrder() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = QuickPresetStore(storeURL: directory.appendingPathComponent("quick-presets.json"))
+        var first = BuiltInPresets.all[0]
+        first.name = "First"
+        var third = BuiltInPresets.all[1]
+        third.name = "Third"
+        store.assign(third, to: 3)
+        store.assign(first, to: 1)
+
+        XCTAssertEqual(store.configuredSlots.map(\.id), [1, 3])
+        XCTAssertEqual(store.configuredSlots.compactMap(\.style?.name), ["First", "Third"])
+    }
 }
 
 final class FinishRenderingTests: XCTestCase {
