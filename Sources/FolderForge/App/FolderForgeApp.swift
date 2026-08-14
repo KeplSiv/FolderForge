@@ -364,6 +364,25 @@ struct SettingsView: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
             }
+
+            Section {
+                HStack(spacing: 12) {
+                    Image(systemName: "star.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.accentColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Enjoying FolderForge?")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("A GitHub star helps other Mac users discover the project.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Star on GitHub") {
+                        state.openGitHubRepository()
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 720, height: 650)

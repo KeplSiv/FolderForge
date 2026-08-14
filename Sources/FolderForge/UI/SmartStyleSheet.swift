@@ -355,8 +355,7 @@ struct SmartStyleSheet: View {
                 }
 
                 if preview.matches.isEmpty, preview.unmatched.isEmpty {
-                    Text("No folders found at this location.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                    smartStyleEmptyState
                 } else {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
@@ -451,6 +450,37 @@ struct SmartStyleSheet: View {
             Label("That folder does not exist.", systemImage: "xmark.circle.fill")
                 .font(.system(size: 11)).foregroundStyle(.secondary)
         }
+    }
+
+    private var smartStyleEmptyState: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "folder.badge.questionmark")
+                .font(.system(size: 24))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 34)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Nothing to preview in this scope")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("Choose a folder that contains subfolders, increase Look in, or include the selected root folder.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    Button("Choose Another Folder…") { browse() }
+                        .controlSize(.small)
+                    if !includeRoot {
+                        Button("Include This Folder") { includeRoot = true }
+                            .controlSize(.small)
+                    }
+                }
+                .padding(.top, 3)
+            }
+            Spacer()
+        }
+        .padding(14)
+        .background(.quaternary.opacity(0.25), in: RoundedRectangle(cornerRadius: 9))
     }
 
     private func matchRow(_ match: SmartStyleMatch) -> some View {

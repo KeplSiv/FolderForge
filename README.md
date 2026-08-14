@@ -6,7 +6,7 @@
 
 Customize macOS folder icons with colors, images, symbols, text, emoji, or ICNS files.
 
-[Download notarized v1.0.7](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.7/FolderForge-1.0.7.dmg) · macOS 14+
+[Download notarized v1.0.8](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.8/FolderForge-1.0.8.dmg) · macOS 14+
 
 <a href="https://www.producthunt.com/products/folderforge?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-folderforge" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1219646&amp;theme=dark" alt="FolderForge - Customize Mac folders with colors, icons, presets, and rules | Product Hunt" width="250" height="54" /></a>
 
@@ -47,7 +47,7 @@ Smart Style matches folders by name, path, marker files, or file types. For exam
 
 Download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
 
-FolderForge 1.0.7 is signed with a Developer ID certificate and notarized by Apple.
+FolderForge 1.0.8 is signed with a Developer ID certificate and notarized by Apple.
 
 To build it yourself:
 

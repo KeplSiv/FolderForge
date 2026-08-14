@@ -161,6 +161,51 @@ final class SmartRulesTests: XCTestCase {
     }
 }
 
+final class EngagementTrackerTests: XCTestCase {
+    private var defaults: UserDefaults!
+    private var suiteName = ""
+
+    override func setUp() {
+        suiteName = "FolderForgeTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: suiteName)!
+    }
+
+    override func tearDown() {
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults = nil
+    }
+
+    func testPromptRequiresTwoSessionsAndTwoSuccessfulApplications() {
+        let tracker = EngagementTracker(defaults: defaults)
+        tracker.registerSession()
+        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+        tracker.registerSession()
+        XCTAssertTrue(tracker.recordSuccessfulStyleApplication())
+    }
+
+    func testSnoozeSuppressesPromptForThirtyDays() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var tracker = EngagementTracker(defaults: defaults, now: { start })
+        tracker.registerSession()
+        tracker.registerSession()
+        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+        tracker.snoozePrompt()
+        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+
+        tracker.now = { start.addingTimeInterval(31 * 24 * 60 * 60) }
+        XCTAssertTrue(tracker.recordSuccessfulStyleApplication())
+    }
+
+    func testCompletedPromptNeverReturns() {
+        let tracker = EngagementTracker(defaults: defaults)
+        tracker.registerSession()
+        tracker.registerSession()
+        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+        tracker.completePrompt()
+        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+    }
+}
+
 final class FolderStyleLayerTests: XCTestCase {
     func testGranularLayerEditingIsOffByDefault() {
         let style = FolderStyle()

@@ -22,8 +22,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.0.7"
-BUILD="8"
+VERSION="1.0.8"
+BUILD="9"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
@@ -194,7 +194,13 @@ fi
 if $DO_DMG; then
   step "Building $DMG"
   rm -f "$DMG"
-  hdiutil create -volname "$APP_NAME" -srcfolder "$APP" -ov -format UDZO "$DMG"
+  DMG_ROOT="$DIST/dmg-root"
+  rm -rf "$DMG_ROOT"
+  mkdir -p "$DMG_ROOT"
+  cp -R "$APP" "$DMG_ROOT/"
+  ln -s /Applications "$DMG_ROOT/Applications"
+  hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_ROOT" -ov -format UDZO "$DMG"
+  rm -rf "$DMG_ROOT"
   if $DO_NOTARIZE; then
     codesign --force --sign "$DEVELOPER_ID_APPLICATION" "$DMG"
   fi

@@ -40,8 +40,63 @@ struct Toast: Identifiable, Equatable {
     var detail: String?
 }
 
+/// Persists only the minimum engagement state needed to make the GitHub ask earned and rare.
+struct EngagementTracker {
+    static let repositoryURL = URL(string: "https://github.com/KeplSiv/FolderForge")!
+
+    private enum Key {
+        static let sessionCount = "engagement.sessionCount"
+        static let successfulApplications = "engagement.successfulApplications"
+        static let promptCompleted = "engagement.githubPromptCompleted"
+        static let promptSnoozedUntil = "engagement.githubPromptSnoozedUntil"
+    }
+
+    let defaults: UserDefaults
+    var now: () -> Date = Date.init
+
+    func registerSession() {
+        defaults.set(defaults.integer(forKey: Key.sessionCount) + 1,
+                     forKey: Key.sessionCount)
+    }
+
+    /// Returns true only when this successful action crosses an eligible prompt threshold.
+    @discardableResult
+    func recordSuccessfulStyleApplication() -> Bool {
+        let applications = defaults.integer(forKey: Key.successfulApplications) + 1
+        defaults.set(applications, forKey: Key.successfulApplications)
+
+        guard defaults.integer(forKey: Key.sessionCount) >= 2,
+              applications >= 2,
+              !defaults.bool(forKey: Key.promptCompleted)
+        else { return false }
+
+        if let snoozedUntil = defaults.object(forKey: Key.promptSnoozedUntil) as? Date,
+           snoozedUntil > now() {
+            return false
+        }
+        return true
+    }
+
+    func snoozePrompt() {
+        let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
+        defaults.set(now().addingTimeInterval(thirtyDays), forKey: Key.promptSnoozedUntil)
+    }
+
+    func completePrompt() {
+        defaults.set(true, forKey: Key.promptCompleted)
+        defaults.removeObject(forKey: Key.promptSnoozedUntil)
+    }
+}
+
 @Observable
 final class AppState {
+
+    private let engagementTracker: EngagementTracker
+
+    init(engagementDefaults: UserDefaults = .standard) {
+        engagementTracker = EngagementTracker(defaults: engagementDefaults)
+        engagementTracker.registerSession()
+    }
 
     // MARK: - Stored state
 
@@ -62,6 +117,8 @@ final class AppState {
     var showingAddSheet = false
     var showingSettings = false
     var showingSmartStyle = false
+    var showingGitHubStarPrompt = false
+    private var starPromptShownThisSession = false
 
     enum InspectorTab: String, CaseIterable, Identifiable {
         case color, fill, icon, tune
@@ -340,6 +397,7 @@ final class AppState {
                               message: items.count == 1
                                   ? "Applied to \(items[0].name)"
                                   : "Applied to \(items.count) folders")
+                recordSuccessfulStyleApplication()
             } else {
                 toast = Toast(kind: .failure,
                               message: "\(failed.count) of \(items.count) failed",
@@ -444,12 +502,36 @@ final class AppState {
             } else if failed.isEmpty {
                 toast = Toast(kind: .success,
                               message: "Applied mapped presets to \(pairs.count) folders")
+                recordSuccessfulStyleApplication()
             } else {
                 toast = Toast(kind: .failure,
                               message: "\(failed.count) of \(pairs.count) failed",
                               detail: failed.first?.error?.localizedDescription)
             }
         }
+    }
+
+    // MARK: - GitHub support prompt
+
+    private func recordSuccessfulStyleApplication() {
+        guard !starPromptShownThisSession,
+              engagementTracker.recordSuccessfulStyleApplication()
+        else { return }
+        starPromptShownThisSession = true
+        showingGitHubStarPrompt = true
+    }
+
+    func openGitHubRepository(completingPrompt: Bool = false) {
+        if completingPrompt {
+            engagementTracker.completePrompt()
+            showingGitHubStarPrompt = false
+        }
+        NSWorkspace.shared.open(EngagementTracker.repositoryURL)
+    }
+
+    func snoozeGitHubStarPrompt() {
+        engagementTracker.snoozePrompt()
+        showingGitHubStarPrompt = false
     }
 
     func previewSmartStyle(root: URL, options: FolderScanner.Options,

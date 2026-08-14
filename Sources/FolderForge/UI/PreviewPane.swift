@@ -288,7 +288,8 @@ struct PresetGallery: View {
             } label: {
                 adaptiveLabel("Save Current", "plus.rectangle.on.folder", showLabels)
             }
-            .buttonStyle(.accessoryBar)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
             .help("Save this design as a preset")
 
             Button { state.randomize() } label: {
