@@ -17,6 +17,8 @@ enum CLI {
             return 0
         case "--export":
             return export(args)
+        case "--app-icon":
+            return appIcon(args)
         case "--contact-sheet":
             return contactSheet(args)
         case "--apply":
@@ -165,6 +167,19 @@ enum CLI {
             return 1
         }
         guard writePNG(cg, to: URL(fileURLWithPath: out)) else { return 1 }
+        print("Wrote \(out) (\(size)×\(size))")
+        return 0
+    }
+
+    private static func appIcon(_ args: [String]) -> Int32 {
+        let options = parse(args)
+        guard let out = options.positional.first ?? options["out"] else {
+            FileHandle.standardError.write(Data("--app-icon needs an output path\n".utf8))
+            return 1
+        }
+        let size = options.int("size") ?? 1024
+        guard let cg = AppIconRenderer.render(pixels: size),
+              writePNG(cg, to: URL(fileURLWithPath: out)) else { return 1 }
         print("Wrote \(out) (\(size)×\(size))")
         return 0
     }

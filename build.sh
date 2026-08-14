@@ -149,15 +149,15 @@ PLIST
 printf 'APPL????' > "$CONTENTS/PkgInfo"
 
 # ---------------------------------------------------------------- app icon
-# Rendered from Resources/AppIcon.svg at every size the iconset needs, straight from the
-# vector rather than downsampled from one master, so the small sizes stay crisp.
+# Render every representation through FolderForge's own native-folder renderer so the
+# geometry, paper layer, gradient, and small-size behavior match the app itself.
 
 step "Rendering app icon"
 ICONSET="$DIST/AppIcon.iconset"
 rm -rf "$ICONSET"
 mkdir -p "$ICONSET"
 
-render() { swift Scripts/svg2png.swift Resources/AppIcon.svg "$ICONSET/icon_$2.png" "$1"; }
+render() { "$BINARY" --app-icon "$ICONSET/icon_$2.png" --size "$1"; }
 render 16    16x16
 render 32    16x16@2x
 render 32    32x32
