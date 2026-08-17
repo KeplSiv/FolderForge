@@ -10,8 +10,6 @@ Open-source macOS folder customization with presets, rules, and recursive worksp
 
 <sub>⭐ If you enjoy FolderForge, consider giving it a star.</sub>
 
-<a href="https://www.producthunt.com/products/folderforge?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-folderforge" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1219646&amp;theme=dark" alt="FolderForge - Customize Mac folders with colors, icons, presets, and rules | Product Hunt" width="250" height="54" /></a>
-
 ![FolderForge icon examples](screenshots/hero.png)
 
 </div>
@@ -91,3 +89,7 @@ swift test
 ```
 
 FolderForge is built with Swift and SwiftUI. Licensed under the [MIT License](LICENSE).
+
+## Community
+
+<a href="https://www.producthunt.com/products/folderforge?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-folderforge" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1219646&amp;theme=dark" alt="FolderForge - Customize Mac folders with colors, icons, presets, and rules | Product Hunt" width="250" height="54" /></a>
