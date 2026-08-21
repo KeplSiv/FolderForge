@@ -6,7 +6,7 @@
 
 Open-source macOS folder customization with presets, rules, and recursive workspace styling.
 
-[Download notarized v1.0.8](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.8/FolderForge-1.0.8.dmg) · macOS 14+
+[Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12) · [Download notarized v1.0.8](https://github.com/KeplSiv/FolderForge/releases/download/v1.0.8/FolderForge-1.0.8.dmg) · macOS 14+
 
 <sub>⭐ If you enjoy FolderForge, consider giving it a star.</sub>
 
@@ -45,7 +45,7 @@ Smart Style matches folders by name, path, marker files, or file types. For exam
 
 ## Install
 
-Download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
+Install FolderForge from the [Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12), or download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
 
 FolderForge 1.0.8 is signed with a Developer ID certificate and notarized by Apple.
 
