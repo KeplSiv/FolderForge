@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…y %1$lld más";
 "…and %lld more unmatched folders" = "…y %1$lld más carpetas inigualables";
+"Hue" = "Matiz";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG o SVG rellenan la parte frontal de la carpeta";

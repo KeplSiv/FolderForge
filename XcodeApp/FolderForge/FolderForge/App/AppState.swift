@@ -48,6 +48,8 @@ struct EngagementTracker {
         static let successfulApplications = "engagement.successfulApplications"
         static let promptCompleted = "engagement.githubPromptCompleted"
         static let promptSnoozedUntil = "engagement.githubPromptSnoozedUntil"
+        static let appStoreSuccessfulApplications = "engagement.appStoreSuccessfulApplications"
+        static let appStoreReviewRequested = "engagement.appStoreReviewRequestedAfterSecondStyle"
     }
 
     let defaults: UserDefaults
@@ -81,6 +83,18 @@ struct EngagementTracker {
     func completePrompt() {
         defaults.set(true, forKey: Key.promptCompleted)
         defaults.removeObject(forKey: Key.promptSnoozedUntil)
+    }
+
+    /// Requests Apple's review sheet once, after the second successful style application.
+    /// StoreKit still makes the final decision about whether the system UI is displayed.
+    func recordSuccessfulApplicationForAppStoreReview() -> Bool {
+        let applications = defaults.integer(forKey: Key.appStoreSuccessfulApplications) + 1
+        defaults.set(applications, forKey: Key.appStoreSuccessfulApplications)
+        guard applications >= 2,
+              !defaults.bool(forKey: Key.appStoreReviewRequested)
+        else { return false }
+        defaults.set(true, forKey: Key.appStoreReviewRequested)
+        return true
     }
 }
 
@@ -124,6 +138,11 @@ final class AppState {
     var showingSettings = false
     var showingSmartStyle = false
     var showingGitHubStarPrompt = false
+#if APP_STORE
+    /// Incremented after a successful icon application so the SwiftUI view can ask
+    /// StoreKit to present Apple's system-controlled review prompt.
+    var appStoreReviewRequest = 0
+#endif
     var appLanguage: AppLanguage = .english {
         didSet { preferences.set(appLanguage.rawValue, forKey: LanguagePreference.languageKey) }
     }
@@ -232,6 +251,13 @@ final class AppState {
         }
     }
 
+    /// Use for URLs delivered by a system picker, drag, or Open event. In the App Store
+    /// build these URLs carry the user's sandbox grant, which we persist for later launches.
+    func addUserSelectedFolders(_ urls: [URL]) {
+        urls.forEach(SandboxAccessStore.remember)
+        addFolders(urls)
+    }
+
     /// Adds a typed path. Returns false if it doesn't resolve to a real directory.
     @discardableResult
     func addPath(_ raw: String) -> Bool {
@@ -256,7 +282,7 @@ final class AppState {
         panel.prompt = "Add"
         panel.message = "Choose folders to customize"
         guard panel.runModal() == .OK else { return }
-        addFolders(panel.urls)
+        addUserSelectedFolders(panel.urls)
     }
 
     func removeSelected() {
@@ -396,6 +422,21 @@ final class AppState {
                 await Task.yield()
             }
 
+#if APP_STORE
+            if !cancelled,
+               outcomes.count == 1,
+               isPermissionFailure(outcomes[0].error),
+               let grantedURL = requestFolderAccess(for: items[0].url) {
+                SandboxAccessStore.remember(grantedURL)
+                do {
+                    try IconApplier.apply(design, to: grantedURL)
+                    outcomes[0] = IconApplier.Outcome(url: items[0].url, error: nil)
+                } catch {
+                    outcomes[0] = IconApplier.Outcome(url: items[0].url, error: error)
+                }
+            }
+#endif
+
             applyProgress = nil
             batchTask = nil
 
@@ -447,6 +488,21 @@ final class AppState {
                 await Task.yield()
             }
 
+#if APP_STORE
+            if !cancelled,
+               outcomes.count == 1,
+               isPermissionFailure(outcomes[0].error),
+               let grantedURL = requestFolderAccess(for: items[0].url) {
+                SandboxAccessStore.remember(grantedURL)
+                do {
+                    try IconApplier.reset(grantedURL)
+                    outcomes[0] = IconApplier.Outcome(url: items[0].url, error: nil)
+                } catch {
+                    outcomes[0] = IconApplier.Outcome(url: items[0].url, error: error)
+                }
+            }
+#endif
+
             applyProgress = nil
             batchTask = nil
             refreshBadges()
@@ -466,6 +522,36 @@ final class AppState {
             }
         }
     }
+
+#if APP_STORE
+    private func isPermissionFailure(_ error: Error?) -> Bool {
+        guard let applyError = error as? IconApplier.ApplyError else { return false }
+        if case .notWritable = applyError { return true }
+        return false
+    }
+
+    @MainActor
+    private func requestFolderAccess(for folder: URL) -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = false
+        panel.directoryURL = folder.deletingLastPathComponent()
+        panel.nameFieldStringValue = folder.lastPathComponent
+        panel.prompt = "Grant Access"
+        panel.message = "Select “\(folder.lastPathComponent)” so FolderForge can change its icon."
+
+        guard panel.runModal() == .OK, let selected = panel.url else { return nil }
+        guard selected.standardizedFileURL.path == folder.standardizedFileURL.path else {
+            toast = Toast(kind: .failure,
+                          message: "That wasn't the requested folder",
+                          detail: "Select “\(folder.lastPathComponent)” to grant access.")
+            return nil
+        }
+        return selected
+    }
+#endif
 
     func undoLastApply() {
         guard let snapshot = lastApply else { return }
@@ -529,10 +615,16 @@ final class AppState {
         }
     }
 
-    // MARK: - GitHub support prompt
+    // MARK: - Store support prompt
 
     private func recordSuccessfulStyleApplication() {
+#if APP_STORE
+        if engagementTracker.recordSuccessfulApplicationForAppStoreReview() {
+            appStoreReviewRequest &+= 1
+        }
+#else
         showingGitHubStarPrompt = engagementTracker.recordSuccessfulStyleApplication()
+#endif
     }
 
     func openGitHubRepository(completingPrompt: Bool = false) {
@@ -850,7 +942,7 @@ final class AppState {
 
     @discardableResult
     func importIconFile(_ url: URL) -> Bool {
-        guard let png = IconImport.pngData(from: url) else {
+        guard let data = IconImport.embeddedData(from: url) else {
             toast = Toast(kind: .failure,
                           message: "Couldn't read that image or icon",
                           detail: url.lastPathComponent)
@@ -858,11 +950,11 @@ final class AppState {
         }
         if IconImport.isICNS(url) {
             style.fill.kind = .icns
-            style.fill.fullIconData = png
+            style.fill.fullIconData = data
             style.fill.imageData = nil
         } else {
             style.fill.kind = .image
-            style.fill.imageData = png
+            style.fill.imageData = data
             style.fill.fullIconData = nil
             style.fillScale = 1.0
             style.fillOpacity = 1.0
@@ -907,7 +999,7 @@ final class AppState {
             }
         }
 
-        if !folderURLs.isEmpty { addFolders(folderURLs) }
+        if !folderURLs.isEmpty { addUserSelectedFolders(folderURLs) }
 
         if importedIcons > 0 || importedStyles > 0 || !folderURLs.isEmpty {
             var pieces: [String] = []

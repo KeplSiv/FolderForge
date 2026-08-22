@@ -159,12 +159,16 @@ enum ImageContentMode: String, Codable, CaseIterable, Identifiable {
 
 struct FolderFill: Codable, Hashable {
     var kind: FillKind = .color
-    /// PNG bytes embedded from a PNG/JPG import. These become the folder face.
+    /// Embedded image bytes. SVG stays vector; raster formats are normalized to PNG.
     var imageData: Data?
-    /// PNG bytes rasterized from an imported ICNS. These replace the whole folder icon.
+    /// Original ICNS bytes (or legacy PNG bytes). These replace the whole folder icon.
     var fullIconData: Data?
     /// Whether imported artwork stays completely visible or covers the folder face.
     var imageContentMode: ImageContentMode = .fill
+    var iconHueRotation: Double = 0          // -180…180 degrees
+    var iconSaturation: Double = 1           // 0…2
+    var iconBrightness: Double = 0           // -0.35…0.35
+    var iconContrast: Double = 1             // 0.6…1.6
 
     init() {}
 
@@ -176,6 +180,14 @@ struct FolderFill: Codable, Hashable {
         fullIconData = (try? container.decodeIfPresent(Data.self, forKey: .fullIconData)) ?? nil
         imageContentMode = (try? container.decodeIfPresent(ImageContentMode.self,
                                                             forKey: .imageContentMode)) ?? .fill
+        iconHueRotation = (try? container.decodeIfPresent(Double.self,
+                                                           forKey: .iconHueRotation)) ?? 0
+        iconSaturation = (try? container.decodeIfPresent(Double.self,
+                                                          forKey: .iconSaturation)) ?? 1
+        iconBrightness = (try? container.decodeIfPresent(Double.self,
+                                                          forKey: .iconBrightness)) ?? 0
+        iconContrast = (try? container.decodeIfPresent(Double.self,
+                                                        forKey: .iconContrast)) ?? 1
     }
 }
 

@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "...그리고 %1$lld 더 많은";
 "…and %lld more unmatched folders" = "...그리고 %1$lld 더 많은 일치하지 않는 폴더";
+"Hue" = "색조";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG 또는 SVG로 폴더 앞면을 채웁니다";

@@ -24,8 +24,9 @@ enum IconRenderer {
     static func render(_ style: FolderStyle, pixels: Int) -> CGImage? {
         if style.fill.kind == .icns,
            let data = style.fill.fullIconData,
-           let image = NSImage(data: data) {
-            return GlyphFactory.rasterizeFitting(image, side: pixels)
+           let image = NSImage(data: data),
+           let rasterized = GlyphFactory.rasterizeFitting(image, side: pixels) {
+            return applyImportedIconTone(rasterized, fill: style.fill) ?? rasterized
         }
 
         guard let base = renderedBase(style: style, pixels: pixels) else { return nil }
@@ -287,6 +288,32 @@ enum IconRenderer {
 
         guard let output = filter.outputImage else { return image }
         return ciContext.createCGImage(output, from: input.extent)
+    }
+
+    private static func applyImportedIconTone(_ image: CGImage, fill: FolderFill) -> CGImage? {
+        let neutral = abs(fill.iconHueRotation) < 0.001
+            && abs(fill.iconSaturation - 1) < 0.001
+            && abs(fill.iconBrightness) < 0.001
+            && abs(fill.iconContrast - 1) < 0.001
+        if neutral { return image }
+
+        let input = CIImage(cgImage: image)
+        var output = input
+
+        if abs(fill.iconHueRotation) >= 0.001 {
+            let hue = CIFilter.hueAdjust()
+            hue.inputImage = output
+            hue.angle = Float(fill.iconHueRotation * .pi / 180)
+            if let adjusted = hue.outputImage { output = adjusted }
+        }
+
+        let controls = CIFilter.colorControls()
+        controls.inputImage = output
+        controls.saturation = Float(fill.iconSaturation)
+        controls.brightness = Float(fill.iconBrightness)
+        controls.contrast = Float(fill.iconContrast)
+        guard let adjusted = controls.outputImage else { return image }
+        return ciContext.createCGImage(adjusted, from: input.extent)
     }
 
     // MARK: - Step 4: image artwork

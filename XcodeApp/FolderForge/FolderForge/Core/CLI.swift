@@ -127,14 +127,14 @@ enum CLI {
             style.finish = .natural
         }
         if let path = options["image"],
-           let png = IconImport.pngData(from: URL(fileURLWithPath: path)) {
+           let data = IconImport.embeddedData(from: URL(fileURLWithPath: path)) {
             if IconImport.isICNS(URL(fileURLWithPath: path)) {
                 style.fill.kind = .icns
-                style.fill.fullIconData = png
+                style.fill.fullIconData = data
                 style.fill.imageData = nil
             } else {
                 style.fill.kind = .image
-                style.fill.imageData = png
+                style.fill.imageData = data
                 style.fill.fullIconData = nil
                 style.fillScale = 1.0
                 style.fillOpacity = 1.0

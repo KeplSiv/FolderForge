@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…および %1$lld などの追加のフォルダ";
 "…and %lld more unmatched folders" = "…および %1$lld などの一致しないフォルダ";
+"Hue" = "色相";
+"PNG, JPG or SVG fills the folder face" = "PNG、JPG、SVGでフォルダの前面を塗りつぶします";

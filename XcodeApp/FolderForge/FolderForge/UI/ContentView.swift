@@ -1,8 +1,14 @@
 import AppKit
 import SwiftUI
+#if APP_STORE
+import StoreKit
+#endif
 
 struct ContentView: View {
     @Bindable var state: AppState
+#if APP_STORE
+    @Environment(\.requestReview) private var requestReview
+#endif
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var confirming: BulkAction?
 
@@ -78,6 +84,12 @@ struct ContentView: View {
                 }
             }
         }
+#if APP_STORE
+        .onChange(of: state.appStoreReviewRequest) { _, request in
+            guard request > 0 else { return }
+            requestReview()
+        }
+#endif
     }
 
     private var subtitle: String {

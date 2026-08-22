@@ -3,6 +3,28 @@ import XCTest
 @testable import FolderForge
 
 final class ImagePlacementTests: XCTestCase {
+    func testSVGImportPreservesVectorSourceData() throws {
+        let svg = Data("""
+        <svg xmlns="http://www.w3.org/2000/svg" width="120" height="60">
+          <rect width="120" height="60" fill="#ff3366"/>
+        </svg>
+        """.utf8)
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("FolderForge-\(UUID().uuidString).svg")
+        try svg.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        XCTAssertTrue(IconImport.canImport(url))
+        let embedded = try XCTUnwrap(IconImport.embeddedData(from: url))
+        XCTAssertEqual(embedded, svg)
+
+        var style = FolderStyle()
+        style.fill.kind = .image
+        style.fill.imageData = embedded
+        XCTAssertNotNil(IconRenderer.render(style, pixels: 16))
+        XCTAssertNotNil(IconRenderer.render(style, pixels: 512))
+    }
+
     func testFitPreservesWideArtworkWhileFillCoversCanvas() throws {
         let image = NSImage(size: NSSize(width: 200, height: 100))
         image.lockFocus()
@@ -37,6 +59,41 @@ final class ImagePlacementTests: XCTestCase {
         )
         XCTAssertEqual(decoded.fill.imageData, Data([1, 2, 3]))
         XCTAssertEqual(decoded.fill.imageContentMode, .fill)
+        XCTAssertEqual(decoded.fill.iconHueRotation, 0)
+        XCTAssertEqual(decoded.fill.iconSaturation, 1)
+        XCTAssertEqual(decoded.fill.iconBrightness, 0)
+        XCTAssertEqual(decoded.fill.iconContrast, 1)
+    }
+
+    func testImportedIconToneRoundTripsAndChangesRendering() throws {
+        let image = NSImage(size: NSSize(width: 64, height: 64))
+        image.lockFocus()
+        NSColor(calibratedRed: 0.8, green: 0.2, blue: 0.1, alpha: 1).setFill()
+        NSRect(x: 0, y: 0, width: 64, height: 64).fill()
+        image.unlockFocus()
+
+        var style = FolderStyle()
+        style.fill.kind = .icns
+        style.fill.fullIconData = try XCTUnwrap(GlyphFactory.pngData(from: image, side: 64))
+        let original = try XCTUnwrap(IconRenderer.render(style, pixels: 64))
+
+        style.fill.iconHueRotation = 45
+        style.fill.iconSaturation = 1.4
+        style.fill.iconBrightness = -0.2
+        style.fill.iconContrast = 1.2
+        let adjusted = try XCTUnwrap(IconRenderer.render(style, pixels: 64))
+
+        XCTAssertNotEqual(NSBitmapImageRep(cgImage: original).representation(using: .png,
+                                                                              properties: [:]),
+                          NSBitmapImageRep(cgImage: adjusted).representation(using: .png,
+                                                                              properties: [:]))
+
+        let decoded = try JSONDecoder().decode(FolderStyle.self,
+                                                from: JSONEncoder().encode(style))
+        XCTAssertEqual(decoded.fill.iconHueRotation, 45)
+        XCTAssertEqual(decoded.fill.iconSaturation, 1.4)
+        XCTAssertEqual(decoded.fill.iconBrightness, -0.2)
+        XCTAssertEqual(decoded.fill.iconContrast, 1.2)
     }
 }
 

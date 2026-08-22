@@ -22,8 +22,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.0.9"
-BUILD="10"
+VERSION="1.1.0"
+BUILD="12"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
@@ -142,6 +142,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
                 <string>heic</string>
                 <string>tiff</string>
                 <string>webp</string>
+                <string>svg</string>
             </array>
         </dict>
     </array>

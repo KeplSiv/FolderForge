@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…en %1$lld meer";
 "…and %lld more unmatched folders" = "…en %1$lld meer ongeëvenaarde mappen";
+"Hue" = "Tint";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG of SVG vullen de voorkant van de map";

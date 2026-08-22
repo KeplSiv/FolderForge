@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…以及 %1$lld 更多";
 "…and %lld more unmatched folders" = "…以及 %1$lld 更多未匹配的文件夹";
+"Hue" = "色相";
+"PNG, JPG or SVG fills the folder face" = "PNG、JPG 或 SVG 填充文件夹正面";

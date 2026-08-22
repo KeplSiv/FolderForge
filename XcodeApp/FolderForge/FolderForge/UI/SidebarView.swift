@@ -89,7 +89,7 @@ struct SidebarView: View {
             }
         }
         .dropDestination(for: URL.self) { urls, _ in
-            state.addFolders(urls)
+            state.addUserSelectedFolders(urls)
             return true
         } isTargeted: { targeted in
             withAnimation(.easeOut(duration: 0.12)) { isTargeted = targeted }

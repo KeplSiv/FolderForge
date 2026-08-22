@@ -148,6 +148,7 @@
 "Horizontal" = "Horizontal";
 "Housekeeping" = "Housekeeping";
 "How deep" = "How deep";
+"Hue" = "Hue";
 "ICNS" = "ICNS";
 "ICNS fill replaces the entire folder icon, so color, overlays and tuning do not apply." = "ICNS fill replaces the entire folder icon, so color, overlays and tuning do not apply.";
 "ICNS fills replace the whole folder. Symbols, emoji and text overlays stay available for image fills." = "ICNS fills replace the whole folder. Symbols, emoji and text overlays stay available for image fills.";
@@ -227,6 +228,7 @@
 "Overlay" = "Overlay";
 "PNG or ICNS works best" = "PNG or ICNS works best";
 "PNG or JPG fills the folder face" = "PNG or JPG fills the folder face";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG or SVG fills the folder face";
 "Palettes" = "Palettes";
 "Paper" = "Paper";
 "Paste Style" = "Paste Style";

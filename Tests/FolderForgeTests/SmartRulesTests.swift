@@ -198,6 +198,13 @@ final class EngagementTrackerTests: XCTestCase {
         tracker.completePrompt()
         XCTAssertFalse(tracker.shouldShowGitHubStarPrompt())
     }
+
+    func testAppStoreReviewIsRequestedOnlyAfterSecondSuccessfulApplication() {
+        let tracker = EngagementTracker(defaults: defaults)
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+        XCTAssertTrue(tracker.recordSuccessfulApplicationForAppStoreReview())
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+    }
 }
 
 final class FolderStyleLayerTests: XCTestCase {

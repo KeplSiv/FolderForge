@@ -35,9 +35,9 @@ enum UISnapshot {
         if let styleOverride { state.style = styleOverride }
         if let inspectorTab { state.inspectorTab = inspectorTab }
         if let overlayKind { state.style.overlay.kind = overlayKind }
-        if let iconURL, let png = IconImport.pngData(from: iconURL) {
+        if let iconURL, let data = IconImport.embeddedData(from: iconURL) {
             state.style.fill.kind = .icns
-            state.style.fill.fullIconData = png
+            state.style.fill.fullIconData = data
             state.style.fill.imageData = nil
             state.inspectorTab = .fill
         }

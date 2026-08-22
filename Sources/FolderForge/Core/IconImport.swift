@@ -4,8 +4,9 @@ import UniformTypeIdentifiers
 /// Normalizes artwork the user brings in from outside FolderForge.
 enum IconImport {
     static let icnsType = UTType(filenameExtension: "icns") ?? .data
-    static let imageContentTypes: [UTType] = [.image]
-    static let allowedContentTypes: [UTType] = [.image, icnsType]
+    static let svgType = UTType(filenameExtension: "svg") ?? .image
+    static let imageContentTypes: [UTType] = [.image, svgType]
+    static let allowedContentTypes: [UTType] = [.image, svgType, icnsType]
     static let applicationContentTypes: [UTType] = [.applicationBundle]
 
     static func canImport(_ url: URL) -> Bool {
@@ -18,6 +19,20 @@ enum IconImport {
 
     static func isICNS(_ url: URL) -> Bool {
         url.pathExtension.lowercased() == "icns"
+    }
+
+    static func isSVG(_ url: URL) -> Bool {
+        url.pathExtension.lowercased() == "svg"
+    }
+
+    /// Keeps scalable and multi-representation formats intact. Raster artwork is normalized
+    /// to PNG so style files remain portable and independent of the source file.
+    static func embeddedData(from url: URL) -> Data? {
+        if isSVG(url) || isICNS(url) {
+            guard NSImage(contentsOf: url) != nil else { return nil }
+            return try? Data(contentsOf: url)
+        }
+        return pngData(from: url)
     }
 
     static func pngData(from url: URL) -> Data? {

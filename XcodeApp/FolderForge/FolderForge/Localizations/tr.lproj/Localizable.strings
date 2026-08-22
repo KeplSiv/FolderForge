@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "...ve %1$lld daha fazlası";
 "…and %lld more unmatched folders" = "...ve %1$lld daha fazla eşleşmeyen klasör";
+"Hue" = "Ton";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG veya SVG klasörün ön yüzünü doldurur";

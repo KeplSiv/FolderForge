@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…и %1$lld еще больше";
 "…and %lld more unmatched folders" = "…и %1$lld еще больше несоответствующих папок";
+"Hue" = "Оттенок";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG или SVG заполняют лицевую сторону папки";

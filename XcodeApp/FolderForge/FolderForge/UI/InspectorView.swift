@@ -379,10 +379,10 @@ private struct LayerFillEditor: View {
 
     @discardableResult
     private func loadImage(from url: URL) -> Bool {
-        guard !IconImport.isICNS(url), let png = IconImport.pngData(from: url) else {
+        guard !IconImport.isICNS(url), let data = IconImport.embeddedData(from: url) else {
             return false
         }
-        layer.imageData = png
+        layer.imageData = data
         layer.fillKind = .image
         return true
     }
@@ -460,7 +460,7 @@ private struct FillTab: View {
                         Text("Drop an image")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
-                        Text("PNG or JPG fills the folder face")
+                        Text("PNG, JPG or SVG fills the folder face")
                             .font(.system(size: 9))
                             .foregroundStyle(.tertiary)
                     }
@@ -498,10 +498,8 @@ private struct FillTab: View {
                         style: StrokeStyle(lineWidth: dropTargeted ? 2 : 1, dash: [5, 3])
                     )
 
-                if let data = state.style.fill.fullIconData, let image = NSImage(data: data) {
-                    Image(nsImage: image)
-                        .resizable()
-                        .scaledToFit()
+                if state.style.fill.fullIconData != nil {
+                    FolderIconView(style: state.style, side: 112)
                         .padding(10)
                 } else {
                     VStack(spacing: 5) {
@@ -526,6 +524,30 @@ private struct FillTab: View {
             Text("ICNS fills replace the whole folder. Symbols, emoji and text overlays stay available for image fills.")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
+
+            Divider()
+            SectionLabel(text: "Tone", symbol: "camera.filters")
+            LabeledSlider(title: "Hue", value: style.fill.iconHueRotation,
+                          range: -180...180, defaultValue: 0, format: "%+.0f°",
+                          symbol: "circle.lefthalf.striped.horizontal")
+            LabeledSlider(title: "Saturation", value: style.fill.iconSaturation,
+                          range: 0...2, defaultValue: 1, symbol: "drop.halffull")
+            LabeledSlider(title: "Brightness", value: style.fill.iconBrightness,
+                          range: -0.35...0.35, defaultValue: 0, format: "%+.2f",
+                          symbol: "sun.max")
+            LabeledSlider(title: "Contrast", value: style.fill.iconContrast,
+                          range: 0.6...1.6, defaultValue: 1,
+                          symbol: "circle.righthalf.filled")
+            Button {
+                state.style.fill.iconHueRotation = 0
+                state.style.fill.iconSaturation = 1
+                state.style.fill.iconBrightness = 0
+                state.style.fill.iconContrast = 1
+            } label: {
+                Label("Reset Tone", systemImage: "arrow.uturn.backward")
+            }
+            .controlSize(.small)
+            .buttonStyle(.bordered)
 
             HStack(spacing: 6) {
                 Button("Choose…") { chooseFill() }
@@ -587,18 +609,18 @@ private struct FillTab: View {
             break
         }
 
-        guard let png = IconImport.pngData(from: url) else {
+        guard let data = IconImport.embeddedData(from: url) else {
             state.toast = Toast(kind: .failure, message: "Couldn't read that file")
             return false
         }
 
         if isICNS {
             state.style.fill.kind = .icns
-            state.style.fill.fullIconData = png
+            state.style.fill.fullIconData = data
             state.style.fill.imageData = nil
         } else {
             state.style.fill.kind = .image
-            state.style.fill.imageData = png
+            state.style.fill.imageData = data
             state.style.fill.fullIconData = nil
             state.style.fill.imageContentMode = .fit
             setImagePlacement(scale: 0.72)
@@ -1016,19 +1038,19 @@ private struct IconTab: View {
 
     @discardableResult
     private func loadImage(from url: URL) -> Bool {
-        guard let png = IconImport.pngData(from: url) else {
+        guard let data = IconImport.embeddedData(from: url) else {
             state.toast = Toast(kind: .failure, message: "Couldn't read that image or icon")
             return false
         }
         if IconImport.isICNS(url) {
-            state.style.fullIconData = png
+            state.style.fullIconData = data
             state.style.overlay.imageData = nil
             state.style.overlay.kind = .icns
             state.toast = Toast(kind: .success, message: "Imported \(url.lastPathComponent)")
             return true
         }
         state.style.fullIconData = nil
-        state.style.overlay.imageData = png
+        state.style.overlay.imageData = data
         state.style.overlay.kind = .image
         setImagePlacement(scale: 1.0)
         // Photos and logos want their own colors.

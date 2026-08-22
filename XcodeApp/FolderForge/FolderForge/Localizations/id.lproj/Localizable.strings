@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…dan %1$lld lebih banyak";
 "…and %lld more unmatched folders" = "…dan %1$lld lebih banyak folder yang tidak cocok";
+"Hue" = "Rona";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG, atau SVG mengisi bagian depan folder";

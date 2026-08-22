@@ -14,7 +14,7 @@ enum IconApplier {
             case .notAFolder(let url):
                 "“\(url.lastPathComponent)” isn't a folder."
             case .notWritable(let url):
-                "No permission to modify “\(url.lastPathComponent)”. Grant access in System Settings › Privacy & Security › Files and Folders."
+                "FolderForge needs permission to modify “\(url.lastPathComponent)”."
             case .renderFailed:
                 "The icon couldn't be rendered."
             case .systemRefused(let url):
@@ -44,20 +44,22 @@ enum IconApplier {
 
     @discardableResult
     static func apply(_ style: FolderStyle, to folder: URL) throws -> NSImage {
-        try validate(folder)
+        try SandboxAccessStore.withAccess(to: folder) { accessibleFolder in
+            try validate(accessibleFolder)
 
-        let image = IconRenderer.iconImage(style)
-        guard !image.representations.isEmpty else { throw ApplyError.renderFailed }
+            let image = IconRenderer.iconImage(style)
+            guard !image.representations.isEmpty else { throw ApplyError.renderFailed }
 
-        BackupStore.captureOriginalIfNeeded(for: folder)
+            BackupStore.captureOriginalIfNeeded(for: accessibleFolder)
 
-        guard NSWorkspace.shared.setIcon(image, forFile: folder.path, options: []) else {
-            throw ApplyError.systemRefused(folder)
+            guard NSWorkspace.shared.setIcon(image, forFile: accessibleFolder.path, options: []) else {
+                throw ApplyError.systemRefused(accessibleFolder)
+            }
+
+            BackupStore.recordApplied(style: style, to: accessibleFolder)
+            refreshFinder(accessibleFolder)
+            return image
         }
-
-        BackupStore.recordApplied(style: style, to: folder)
-        refreshFinder(folder)
-        return image
     }
 
     /// Applies to many folders, reporting progress as it goes. Never throws — each folder's
@@ -83,6 +85,12 @@ enum IconApplier {
     /// Puts the folder back to whatever it looked like before FolderForge touched it — the
     /// original custom icon if there was one, otherwise the plain system folder.
     static func reset(_ folder: URL) throws {
+        try SandboxAccessStore.withAccess(to: folder) { accessibleFolder in
+            try resetWithAccess(accessibleFolder)
+        }
+    }
+
+    private static func resetWithAccess(_ folder: URL) throws {
         try validate(folder)
 
         switch BackupStore.restoreOriginal(for: folder) {

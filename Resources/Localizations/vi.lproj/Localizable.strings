@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…và %1$lld thêm nữa";
 "…and %lld more unmatched folders" = "…và %1$lld thêm nhiều thư mục không khớp";
+"Hue" = "Sắc độ";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG hoặc SVG sẽ lấp đầy mặt trước thư mục";

@@ -358,3 +358,5 @@
 "·" = "·";
 "…and %lld more" = "…et %1$lld plus";
 "…and %lld more unmatched folders" = "…et %1$lld autres dossiers sans correspondance";
+"Hue" = "Teinte";
+"PNG, JPG or SVG fills the folder face" = "PNG, JPG ou SVG remplissent la face du dossier";

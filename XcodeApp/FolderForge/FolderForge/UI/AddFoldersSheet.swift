@@ -509,6 +509,7 @@ struct AddFoldersSheet: View {
         panel.prompt = "Choose"
         if let root = resolvedRoot, rootExists { panel.directoryURL = root }
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        SandboxAccessStore.remember(url)
         pathText = url.path.replacingOccurrences(of: NSHomeDirectory(), with: "~")
         showCompletions = false
         rescan()
