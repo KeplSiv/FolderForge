@@ -22,8 +22,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.0.8"
-BUILD="9"
+VERSION="1.0.9"
+BUILD="10"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
@@ -71,6 +71,9 @@ step "Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$MACOS" "$RESOURCES"
 cp "$BINARY" "$MACOS/$APP_NAME"
+if [ -d "Resources/Localizations" ]; then
+  cp -R Resources/Localizations/. "$RESOURCES/"
+fi
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

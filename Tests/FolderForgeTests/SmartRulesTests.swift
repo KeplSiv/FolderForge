@@ -175,34 +175,28 @@ final class EngagementTrackerTests: XCTestCase {
         defaults = nil
     }
 
-    func testPromptRequiresTwoSessionsAndTwoSuccessfulApplications() {
+    func testPromptAppearsAfterFirstSuccessfulApplication() {
         let tracker = EngagementTracker(defaults: defaults)
-        tracker.registerSession()
-        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
-        tracker.registerSession()
         XCTAssertTrue(tracker.recordSuccessfulStyleApplication())
+        XCTAssertTrue(tracker.shouldShowGitHubStarPrompt())
     }
 
-    func testSnoozeSuppressesPromptForThirtyDays() {
+    func testSnoozeSuppressesPromptForSevenDays() {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         var tracker = EngagementTracker(defaults: defaults, now: { start })
-        tracker.registerSession()
-        tracker.registerSession()
-        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
-        tracker.snoozePrompt()
-        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
-
-        tracker.now = { start.addingTimeInterval(31 * 24 * 60 * 60) }
         XCTAssertTrue(tracker.recordSuccessfulStyleApplication())
+        tracker.snoozePrompt()
+        XCTAssertFalse(tracker.shouldShowGitHubStarPrompt())
+
+        tracker.now = { start.addingTimeInterval(8 * 24 * 60 * 60) }
+        XCTAssertTrue(tracker.shouldShowGitHubStarPrompt())
     }
 
     func testCompletedPromptNeverReturns() {
         let tracker = EngagementTracker(defaults: defaults)
-        tracker.registerSession()
-        tracker.registerSession()
-        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+        XCTAssertTrue(tracker.recordSuccessfulStyleApplication())
         tracker.completePrompt()
-        XCTAssertFalse(tracker.recordSuccessfulStyleApplication())
+        XCTAssertFalse(tracker.shouldShowGitHubStarPrompt())
     }
 }
 
