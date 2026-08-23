@@ -13,6 +13,7 @@ Package.resolved
 # Local scratch / not part of the release
 testbed/
 docs/
+XcodeApp/
 .vscode/
 .idea/
 *.xcodeproj
