@@ -6,7 +6,7 @@
 
 Open-source macOS folder customization with presets, rules, and recursive workspace styling.
 
-[Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12) · [Download notarized v1.1.0](https://github.com/KeplSiv/FolderForge/releases/download/v1.1.0/FolderForge-1.1.0.dmg) · macOS 14+
+[Website & Docs](https://folder-forge.vercel.app/) · [Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12) · [Download notarized v1.1.0](https://github.com/KeplSiv/FolderForge/releases/download/v1.1.0/FolderForge-1.1.0.dmg) · macOS 14+
 
 <sub>⭐ If you enjoy FolderForge, consider giving it a star.</sub>
 
