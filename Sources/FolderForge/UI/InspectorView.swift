@@ -776,8 +776,11 @@ private struct IconTab: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(state.style.textFontName ?? "System Default")
-                            .font(state.style.textFontName.map { .custom($0, size: 11) }
-                                ?? .system(size: 11))
+                            .font(Font(FontCatalog.font(
+                                familyName: state.style.textFontName,
+                                size: 11,
+                                weight: state.style.symbolWeight
+                            )))
                             .lineLimit(1)
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 8, weight: .semibold))

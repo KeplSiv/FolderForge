@@ -81,6 +81,20 @@ struct AddFoldersSheet: View {
             && isDirectory.boolValue
     }
 
+    /// Sheets attach below the title bar, so using the full screen height can still
+    /// put the footer below the display. Keep enough vertical breathing room and let
+    /// the middle form scroll while the actions remain fixed in place.
+    static func preferredHeight(forVisibleScreenHeight visibleHeight: CGFloat) -> CGFloat {
+        min(780, max(520, visibleHeight * 0.78))
+    }
+
+    private var preferredSheetHeight: CGFloat {
+        let visibleHeight = NSApp.keyWindow?.screen?.visibleFrame.height
+            ?? NSScreen.main?.visibleFrame.height
+            ?? 780
+        return Self.preferredHeight(forVisibleScreenHeight: visibleHeight)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -100,8 +114,7 @@ struct AddFoldersSheet: View {
             Divider()
             footer
         }
-        // Tall enough that the match preview sits above the fold rather than needing a scroll.
-        .frame(width: 560, height: 780)
+        .frame(width: 560, height: preferredSheetHeight)
         .onAppear {
             if pathText.isEmpty {
                 pathText = initialPath.isEmpty

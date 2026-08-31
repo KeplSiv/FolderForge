@@ -17,9 +17,11 @@ enum GlyphFactory {
             return text(style.overlay.emoji, side: side, font: emojiFont(size: CGFloat(side) * 0.82))
         case .text:
             let pointSize = CGFloat(side) * 0.6
-            let font = style.textFontName
-                .flatMap { NSFont(name: $0, size: pointSize) }
-                ?? NSFont.systemFont(ofSize: pointSize, weight: style.symbolWeight.nsWeight)
+            let font = FontCatalog.font(
+                familyName: style.textFontName,
+                size: pointSize,
+                weight: style.symbolWeight
+            )
             return text(style.overlay.text, side: side, font: font)
         case .appIcon:
             guard let data = style.overlay.imageData,

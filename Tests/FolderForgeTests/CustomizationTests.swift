@@ -109,6 +109,36 @@ final class TextFontTests: XCTestCase {
         )
         XCTAssertEqual(decoded.textFontName, "Helvetica")
     }
+
+    func testSelectedWeightChoosesTheMatchingCustomFontFace() {
+        let regular = FontCatalog.font(familyName: "Helvetica", size: 32, weight: .regular)
+        let bold = FontCatalog.font(familyName: "Helvetica", size: 32, weight: .bold)
+        let manager = NSFontManager.shared
+
+        XCTAssertEqual(regular.familyName, bold.familyName)
+        XCTAssertGreaterThan(manager.weight(of: bold), manager.weight(of: regular))
+        XCTAssertNotEqual(regular.fontName, bold.fontName)
+    }
+
+    func testMissingCustomFontFallsBackToWeightedSystemFont() {
+        let font = FontCatalog.font(
+            familyName: "FolderForge Definitely Missing Font",
+            size: 24,
+            weight: .bold
+        )
+
+        XCTAssertGreaterThanOrEqual(NSFontManager.shared.weight(of: font), 9)
+    }
+}
+
+final class AddFoldersSheetLayoutTests: XCTestCase {
+    func testShortDisplayUsesCompactScrollableSheetHeight() {
+        XCTAssertEqual(AddFoldersSheet.preferredHeight(forVisibleScreenHeight: 800), 624)
+    }
+
+    func testLargeDisplayKeepsComfortableMaximumHeight() {
+        XCTAssertEqual(AddFoldersSheet.preferredHeight(forVisibleScreenHeight: 1_200), 780)
+    }
 }
 
 final class LanguagePreferenceTests: XCTestCase {

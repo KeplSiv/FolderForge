@@ -45,6 +45,32 @@ enum FontCatalog {
         }
     }
 
+    /// Resolves the closest face in a selected family for the requested weight.
+    /// `NSFont(name:size:)` treats a family name as one fixed face, which made the
+    /// weight control appear to work only for the system font.
+    static func font(familyName: String?,
+                     size: CGFloat,
+                     weight: FolderStyle.SymbolWeight) -> NSFont {
+        guard let familyName, !familyName.isEmpty else {
+            return .systemFont(ofSize: size, weight: weight.nsWeight)
+        }
+
+        let manager = NSFontManager.shared
+        let resolvedFamily = NSFont(name: familyName, size: size)?.familyName ?? familyName
+        if let face = manager.font(
+            withFamily: resolvedFamily,
+            traits: [],
+            weight: weight.appKitWeight,
+            size: size
+        ) {
+            return face
+        }
+
+        // Some imported fonts expose only a PostScript name or a single face.
+        return NSFont(name: familyName, size: size)
+            ?? .systemFont(ofSize: size, weight: weight.nsWeight)
+    }
+
     @discardableResult
     static func importFont(from source: URL) throws -> [String] {
         guard supportedExtensions.contains(source.pathExtension.lowercased()) else {

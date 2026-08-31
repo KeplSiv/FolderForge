@@ -379,6 +379,21 @@ struct FolderStyle: Codable, Hashable, Identifiable {
             case .black: .black
             }
         }
+
+        /// AppKit's family-face lookup uses the legacy 0...15 weight scale.
+        /// These values mirror the weights returned by `NSFontManager.weight(of:)`.
+        var appKitWeight: Int {
+            switch self {
+            case .ultraLight: 2
+            case .light: 3
+            case .regular: 5
+            case .medium: 6
+            case .semibold: 8
+            case .bold: 9
+            case .heavy: 12
+            case .black: 14
+            }
+        }
     }
 
     init() {}
