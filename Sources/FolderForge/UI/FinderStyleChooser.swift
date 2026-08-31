@@ -56,7 +56,7 @@ struct FinderStyleChooser: View {
 
             footer
         }
-        .frame(width: 720, height: 610)
+        .screenFittedDialog(width: 720, height: 610)
         .background(Color(nsColor: .windowBackgroundColor))
         .alert("Could Not Restore Icon", isPresented: Binding(
             get: { restoreError != nil },

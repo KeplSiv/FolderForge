@@ -49,7 +49,7 @@ struct FontPickerSheet: View {
             }
             .searchable(text: $query, placement: .toolbar, prompt: "Search fonts")
         }
-        .frame(minWidth: 520, minHeight: 560)
+        .screenFittedDialog(width: 560, height: 560)
     }
 
     private func fontRow(name: String?) -> some View {

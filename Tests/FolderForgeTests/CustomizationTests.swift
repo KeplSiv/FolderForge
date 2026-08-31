@@ -131,13 +131,29 @@ final class TextFontTests: XCTestCase {
     }
 }
 
-final class AddFoldersSheetLayoutTests: XCTestCase {
+final class DialogLayoutTests: XCTestCase {
     func testShortDisplayUsesCompactScrollableSheetHeight() {
-        XCTAssertEqual(AddFoldersSheet.preferredHeight(forVisibleScreenHeight: 800), 624)
+        let size = DialogLayout.fittedSize(preferredWidth: 760, preferredHeight: 800,
+                                           visibleWidth: 1_280, visibleHeight: 800)
+        XCTAssertEqual(size, CGSize(width: 760, height: 624))
     }
 
     func testLargeDisplayKeepsComfortableMaximumHeight() {
-        XCTAssertEqual(AddFoldersSheet.preferredHeight(forVisibleScreenHeight: 1_200), 780)
+        let size = DialogLayout.fittedSize(preferredWidth: 760, preferredHeight: 800,
+                                           visibleWidth: 1_920, visibleHeight: 1_200)
+        XCTAssertEqual(size, CGSize(width: 760, height: 800))
+    }
+
+    func testNarrowDisplayAlsoConstrainsDialogWidth() {
+        let size = DialogLayout.fittedSize(preferredWidth: 760, preferredHeight: 800,
+                                           visibleWidth: 700, visibleHeight: 800)
+        XCTAssertEqual(size, CGSize(width: 630, height: 624))
+    }
+
+    func testDialogNeverExceedsAnExtremelySmallVisibleFrame() {
+        let size = DialogLayout.fittedSize(preferredWidth: 760, preferredHeight: 800,
+                                           visibleWidth: 320, visibleHeight: 300)
+        XCTAssertEqual(size, CGSize(width: 320, height: 300))
     }
 }
 

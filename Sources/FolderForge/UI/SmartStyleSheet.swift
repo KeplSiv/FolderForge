@@ -24,6 +24,8 @@ struct SmartStyleSheet: View {
     @State private var showingRuleSetOptions = false
     @State private var showingRepeatedStructures = false
     @State private var showingAudit = false
+    @State private var ruleSetNameDraft = ""
+    @FocusState private var ruleSetNameFocused: Bool
 
     private var resolvedRoot: URL? { FolderScanner.resolve(path: pathText) }
     private var rootExists: Bool {
@@ -57,7 +59,7 @@ struct SmartStyleSheet: View {
             Divider()
             footer
         }
-        .frame(width: 760, height: 800)
+        .screenFittedDialog(width: 760, height: 800)
         .onAppear {
             if pathText.isEmpty {
                 pathText = initialPath.isEmpty
@@ -71,7 +73,12 @@ struct SmartStyleSheet: View {
         .onDisappear { scanTask?.cancel() }
         .onChange(of: pathText) { _, _ in rescan() }
         .onChange(of: includeRoot) { _, _ in rescan() }
-        .onChange(of: state.smartRules.activeRuleSetID) { _, _ in rescan() }
+        .onChange(of: state.smartRules.activeRuleSetID) { _, _ in
+            if showingRuleSetOptions {
+                ruleSetNameDraft = state.smartRules.activeRuleSet.name
+            }
+            rescan()
+        }
     }
 
     private var header: some View {
@@ -202,8 +209,12 @@ struct SmartStyleSheet: View {
                     .controlSize(.small)
 
                     Menu {
-                        Button(showingRuleSetOptions ? "Hide name editor" : "Rename rule set") {
-                            withAnimation(.easeOut(duration: 0.14)) { showingRuleSetOptions.toggle() }
+                        Button(showingRuleSetOptions ? "Cancel rename" : "Rename rule set") {
+                            if showingRuleSetOptions {
+                                cancelRuleSetRename()
+                            } else {
+                                beginRuleSetRename()
+                            }
                         }
                         Button("Duplicate rule set") { state.smartRules.duplicateActive(); rescan() }
                         Divider()
@@ -229,9 +240,17 @@ struct SmartStyleSheet: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .frame(width: 60, alignment: .leading)
-                    TextField("Rule set name", text: activeNameBinding)
+                    TextField("Rule set name", text: $ruleSetNameDraft)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(size: 11))
+                        .focused($ruleSetNameFocused)
+                        .onSubmit(commitRuleSetRename)
+                    Button("Cancel", action: cancelRuleSetRename)
+                        .controlSize(.small)
+                    Button("Rename", action: commitRuleSetRename)
+                        .controlSize(.small)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(ruleSetNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 Text(state.smartRules.activeIsStarterRuleSet
                      ? "This is the editable starter base that new rule sets use by default."
@@ -263,11 +282,30 @@ struct SmartStyleSheet: View {
         return "\(localRuleCount) custom rules"
     }
 
-    private var activeNameBinding: Binding<String> {
-        Binding(get: { state.smartRules.activeRuleSet.name }, set: { value in
-            state.smartRules.renameActive(to: value)
-            rescan()
-        })
+    private func beginRuleSetRename() {
+        ruleSetNameDraft = state.smartRules.activeRuleSet.name
+        withAnimation(.easeOut(duration: 0.14)) { showingRuleSetOptions = true }
+        Task { @MainActor in
+            await Task.yield()
+            ruleSetNameFocused = true
+        }
+    }
+
+    private func cancelRuleSetRename() {
+        ruleSetNameFocused = false
+        ruleSetNameDraft = state.smartRules.activeRuleSet.name
+        withAnimation(.easeOut(duration: 0.14)) { showingRuleSetOptions = false }
+    }
+
+    private func commitRuleSetRename() {
+        guard let committedName = state.smartRules.renameActive(to: ruleSetNameDraft) else {
+            ruleSetNameFocused = true
+            return
+        }
+        ruleSetNameDraft = committedName
+        ruleSetNameFocused = false
+        withAnimation(.easeOut(duration: 0.14)) { showingRuleSetOptions = false }
+        rescan()
     }
 
     private var rulesSection: some View {

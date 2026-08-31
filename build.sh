@@ -22,8 +22,8 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.1.1"
-BUILD="13"
+VERSION="1.1.2"
+BUILD="14"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"

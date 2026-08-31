@@ -1,6 +1,52 @@
 import AppKit
 import SwiftUI
 
+/// Keeps app-owned sheets and utility panels inside the usable area of the display.
+/// The height allowance accounts for the menu bar, Dock, parent title bar, and the
+/// point below the toolbar where an attached sheet begins.
+enum DialogLayout {
+    static func fittedSize(preferredWidth: CGFloat,
+                           preferredHeight: CGFloat,
+                           visibleWidth: CGFloat,
+                           visibleHeight: CGFloat) -> CGSize {
+        let safeWidth = max(1, visibleWidth)
+        let safeHeight = max(1, visibleHeight)
+        let availableWidth = min(safeWidth, max(360, safeWidth * 0.90))
+        let availableHeight = min(safeHeight, max(420, safeHeight * 0.78))
+        return CGSize(width: min(preferredWidth, availableWidth),
+                      height: min(preferredHeight, availableHeight))
+    }
+
+    static func currentSize(preferredWidth: CGFloat,
+                            preferredHeight: CGFloat) -> CGSize {
+        let frame = NSApp.keyWindow?.screen?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+            ?? CGRect(x: 0, y: 0, width: preferredWidth, height: preferredHeight)
+        return fittedSize(preferredWidth: preferredWidth,
+                          preferredHeight: preferredHeight,
+                          visibleWidth: frame.width,
+                          visibleHeight: frame.height)
+    }
+}
+
+private struct ScreenFittedDialogModifier: ViewModifier {
+    let preferredWidth: CGFloat
+    let preferredHeight: CGFloat
+
+    func body(content: Content) -> some View {
+        let size = DialogLayout.currentSize(preferredWidth: preferredWidth,
+                                            preferredHeight: preferredHeight)
+        content.frame(width: size.width, height: size.height)
+    }
+}
+
+extension View {
+    func screenFittedDialog(width: CGFloat, height: CGFloat) -> some View {
+        modifier(ScreenFittedDialogModifier(preferredWidth: width,
+                                            preferredHeight: height))
+    }
+}
+
 /// A labelled slider with a live numeric readout and a double-click-to-reset affordance.
 struct LabeledSlider: View {
     var title: String

@@ -408,15 +408,19 @@ final class SmartRuleStore {
     var activeRuleSetID: UUID
     private var watchService: FolderWatchService?
     private var watchHandler: ((SmartRuleWatch) -> Void)?
+    private let storageDirectory: URL
 
     private var rulesURL: URL {
-        BackupStore.supportDirectory.appendingPathComponent("smart-rules.json")
+        storageDirectory.appendingPathComponent("smart-rules.json")
     }
     private var watchesURL: URL {
-        BackupStore.supportDirectory.appendingPathComponent("smart-rule-watches.json")
+        storageDirectory.appendingPathComponent("smart-rule-watches.json")
     }
 
-    init() {
+    init(storageDirectory: URL = BackupStore.supportDirectory) {
+        self.storageDirectory = storageDirectory
+        try? FileManager.default.createDirectory(at: storageDirectory,
+                                                 withIntermediateDirectories: true)
         let fallback = Self.defaultRuleSet
         activeRuleSetID = fallback.id
         if let data = try? Data(contentsOf: rulesURL),
@@ -504,10 +508,18 @@ final class SmartRuleStore {
         saveRules()
     }
 
-    func renameActive(to name: String) {
+    @discardableResult
+    func renameActive(to name: String) -> String? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        updateActive { $0.name = uniqueName(trimmed, excluding: $0.id) }
+        guard !trimmed.isEmpty,
+              ruleSets.contains(where: { $0.id == activeRuleSetID }) else { return nil }
+
+        // Resolve the name before opening an inout access to an array element. Calling
+        // `uniqueName` from inside `updateActive` reads `ruleSets` while it is already
+        // being mutated, which triggers Swift's runtime exclusivity trap.
+        let resolvedName = uniqueName(trimmed, excluding: activeRuleSetID)
+        updateActive { $0.name = resolvedName }
+        return resolvedName
     }
 
     func setActiveParent(_ parentID: UUID?) {

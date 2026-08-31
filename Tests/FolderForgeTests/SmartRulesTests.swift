@@ -161,6 +161,60 @@ final class SmartRulesTests: XCTestCase {
     }
 }
 
+final class SmartRuleStoreMutationTests: XCTestCase {
+    private var storageDirectory: URL!
+
+    override func setUpWithError() throws {
+        storageDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("FolderForgeRuleStore-\(UUID().uuidString)",
+                                    isDirectory: true)
+        try FileManager.default.createDirectory(at: storageDirectory,
+                                                withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: storageDirectory)
+    }
+
+    func testRenameDoesNotOverlapRuleSetMutationAndPersists() {
+        let store = SmartRuleStore(storageDirectory: storageDirectory)
+        let activeID = store.activeRuleSetID
+
+        XCTAssertEqual(store.renameActive(to: "  Workspaces  "), "Workspaces")
+        XCTAssertEqual(store.activeRuleSet.name, "Workspaces")
+        XCTAssertEqual(store.activeRuleSetID, activeID)
+
+        let reloaded = SmartRuleStore(storageDirectory: storageDirectory)
+        XCTAssertEqual(reloaded.activeRuleSet.name, "Workspaces")
+    }
+
+    func testRenameRejectsWhitespaceWithoutChangingTheStoredName() {
+        let store = SmartRuleStore(storageDirectory: storageDirectory)
+        let originalName = store.activeRuleSet.name
+
+        XCTAssertNil(store.renameActive(to: " \n\t "))
+        XCTAssertEqual(store.activeRuleSet.name, originalName)
+    }
+
+    func testRenameMakesDuplicateNamesUniqueCaseInsensitively() {
+        let store = SmartRuleStore(storageDirectory: storageDirectory)
+        store.createRuleSet(named: "Client")
+        store.createRuleSet(named: "Other")
+
+        XCTAssertEqual(store.renameActive(to: "client"), "client 2")
+        XCTAssertEqual(store.activeRuleSet.name, "client 2")
+    }
+
+    func testRepeatedRenamesRemainStable() {
+        let store = SmartRuleStore(storageDirectory: storageDirectory)
+
+        for name in ["A", "AB", "ABC", "Final name"] {
+            XCTAssertEqual(store.renameActive(to: name), name)
+        }
+        XCTAssertEqual(store.activeRuleSet.name, "Final name")
+    }
+}
+
 final class EngagementTrackerTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName = ""

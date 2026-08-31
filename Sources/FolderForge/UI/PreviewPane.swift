@@ -463,6 +463,6 @@ private struct ReorderStylesSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 470, height: 460)
+        .screenFittedDialog(width: 470, height: 460)
     }
 }

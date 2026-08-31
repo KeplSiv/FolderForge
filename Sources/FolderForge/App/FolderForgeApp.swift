@@ -211,8 +211,9 @@ final class FinderServicesProvider: NSObject {
             panel.orderOut(nil)
         }
 
+        let panelSize = DialogLayout.currentSize(preferredWidth: 720, preferredHeight: 610)
         panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 720, height: 610),
+            contentRect: NSRect(origin: .zero, size: panelSize),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -405,7 +406,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 720, height: 650)
+        .screenFittedDialog(width: 720, height: 650)
     }
     }
 

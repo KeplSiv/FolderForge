@@ -761,7 +761,7 @@ private struct IconTab: View {
             .controlSize(.small)
             .sheet(isPresented: $showingFullSymbolPicker) {
                 FullSymbolBrowser(selection: style.overlay.symbolName)
-                    .frame(minWidth: 700, minHeight: 520)
+                    .screenFittedDialog(width: 700, height: 520)
             }
 
         case .emoji:
