@@ -134,14 +134,24 @@ struct PreviewPane: View {
             else if width > 340 { [64, 32, 16] }
             else { [32, 16] }
 
-        return HStack(alignment: .bottom, spacing: width > 460 ? 20 : 14) {
-            ForEach(sizes, id: \.self) { size in
-                VStack(spacing: 5) {
-                    icon(side: CGFloat(size))
-                    Text("\(size)")
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.tertiary)
+        return VStack(spacing: 7) {
+            HStack(alignment: .bottom, spacing: width > 460 ? 20 : 14) {
+                ForEach(sizes, id: \.self) { size in
+                    VStack(spacing: 5) {
+                        icon(side: CGFloat(size))
+                        Text("\(size)")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+            }
+            if let warning = IconLegibility.warnings(for: state.style).first {
+                Label(warning, systemImage: "exclamationmark.triangle")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.orange)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 340)
             }
         }
         .padding(.horizontal, 20)

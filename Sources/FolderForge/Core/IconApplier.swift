@@ -52,12 +52,25 @@ enum IconApplier {
 
             BackupStore.captureOriginalIfNeeded(for: accessibleFolder)
 
+            // Finder can keep showing the old icon when one custom icon directly
+            // replaces another. Clear it first so Finder discovers the replacement
+            // through its normal no-icon -> new-icon path.
+            let previousIcon = hasCustomIcon(accessibleFolder)
+                ? NSWorkspace.shared.icon(forFile: accessibleFolder.path) : nil
+            if previousIcon != nil,
+               !NSWorkspace.shared.setIcon(nil, forFile: accessibleFolder.path, options: []) {
+                throw ApplyError.systemRefused(accessibleFolder)
+            }
+
             guard NSWorkspace.shared.setIcon(image, forFile: accessibleFolder.path, options: []) else {
+                if let previousIcon {
+                    _ = NSWorkspace.shared.setIcon(previousIcon, forFile: accessibleFolder.path, options: [])
+                }
                 throw ApplyError.systemRefused(accessibleFolder)
             }
 
             BackupStore.recordApplied(style: style, to: accessibleFolder)
-            refreshFinder(accessibleFolder)
+            notifyFinder(of: accessibleFolder)
             return image
         }
     }
@@ -96,7 +109,7 @@ enum IconApplier {
         switch BackupStore.restoreOriginal(for: folder) {
         case .restored:
             BackupStore.clearApplied(for: folder)
-            refreshFinder(folder)
+            notifyFinder(of: folder)
             return
         case .failed:
             // We have the original but couldn't write it. Clearing here would destroy the
@@ -120,7 +133,7 @@ enum IconApplier {
         }
 
         BackupStore.clearApplied(for: folder)
-        refreshFinder(folder)
+        notifyFinder(of: folder)
     }
 
     static func resetBatch(_ folders: [URL]) -> [Outcome] {
@@ -151,7 +164,7 @@ enum IconApplier {
     }
 
     /// Nudges Finder so the new icon shows up without needing a relaunch.
-    private static func refreshFinder(_ folder: URL) {
+    static func notifyFinder(of folder: URL) {
         NSWorkspace.shared.noteFileSystemChanged(folder.path)
         // Touching the parent makes Finder re-read the directory entry.
         let parent = folder.deletingLastPathComponent().path

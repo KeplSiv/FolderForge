@@ -43,14 +43,23 @@ struct Toast: Identifiable, Equatable {
 /// Persists only the minimum engagement state needed to show a quiet GitHub support action.
 struct EngagementTracker {
     static let repositoryURL = URL(string: "https://github.com/KeplSiv/FolderForge")!
+#if APP_STORE
+    static let appStoreReviewURL = URL(
+        string: "https://apps.apple.com/app/id6799417746?action=write-review"
+    )!
+#endif
 
     private enum Key {
         static let successfulApplications = "engagement.successfulApplications"
         static let promptCompleted = "engagement.githubPromptCompleted"
         static let promptSnoozedUntil = "engagement.githubPromptSnoozedUntil"
         static let appStoreSuccessfulApplications = "engagement.appStoreSuccessfulApplications"
+        static let appStoreLastReviewRequest = "engagement.appStoreLastReviewRequest"
+        // Kept only to migrate people who received the one-time prompt in an older build.
         static let appStoreReviewRequested = "engagement.appStoreReviewRequestedAfterSecondStyle"
     }
+
+    private static let appStoreReviewInterval: TimeInterval = 90 * 24 * 60 * 60
 
     let defaults: UserDefaults
     var now: () -> Date = Date.init
@@ -85,15 +94,27 @@ struct EngagementTracker {
         defaults.removeObject(forKey: Key.promptSnoozedUntil)
     }
 
-    /// Requests Apple's review sheet once, after the second successful style application.
-    /// StoreKit still makes the final decision about whether the system UI is displayed.
+    /// Becomes eligible after the third successful style, then at most once every 90 days.
+    /// StoreKit still decides whether Apple's system-controlled review UI is displayed.
     func recordSuccessfulApplicationForAppStoreReview() -> Bool {
         let applications = defaults.integer(forKey: Key.appStoreSuccessfulApplications) + 1
         defaults.set(applications, forKey: Key.appStoreSuccessfulApplications)
-        guard applications >= 2,
-              !defaults.bool(forKey: Key.appStoreReviewRequested)
-        else { return false }
-        defaults.set(true, forKey: Key.appStoreReviewRequested)
+        guard applications >= 3 else { return false }
+
+        let currentDate = now()
+        if defaults.bool(forKey: Key.appStoreReviewRequested),
+           defaults.object(forKey: Key.appStoreLastReviewRequest) == nil {
+            defaults.set(currentDate, forKey: Key.appStoreLastReviewRequest)
+            defaults.removeObject(forKey: Key.appStoreReviewRequested)
+            return false
+        }
+
+        if let lastRequest = defaults.object(forKey: Key.appStoreLastReviewRequest) as? Date,
+           currentDate.timeIntervalSince(lastRequest) < Self.appStoreReviewInterval {
+            return false
+        }
+
+        defaults.set(currentDate, forKey: Key.appStoreLastReviewRequest)
         return true
     }
 }
@@ -127,6 +148,7 @@ final class AppState {
     var style = FolderStyle()
 
     var presets = PresetStore()
+    var themes = WorkspaceThemeStore()
     var smartRules = SmartRuleStore()
 
     var previewScale: Double = 1.0
@@ -137,6 +159,8 @@ final class AppState {
     var showingAddSheet = false
     var showingSettings = false
     var showingSmartStyle = false
+    var showingWorkspaceThemes = false
+    var pendingSetupImport: SetupArchive?
     var showingGitHubStarPrompt = false
 #if APP_STORE
     /// Incremented after a successful icon application so the SwiftUI view can ask
@@ -330,13 +354,45 @@ final class AppState {
     }
 
     func refreshFinder() {
-        if !targets.isEmpty {
-            for item in targets {
-                NSWorkspace.shared.noteFileSystemChanged(item.url.path)
-                NSWorkspace.shared.noteFileSystemChanged(item.url.deletingLastPathComponent().path)
-            }
+        guard batchTask == nil else { return }
+        let items = targets
+        guard !items.isEmpty else {
+            toast = Toast(kind: .info, message: "Add a folder to refresh")
+            return
         }
+        // Finder can hold an old custom icon in its cache even after Icon\r was
+        // replaced. Reapply FolderForge's recorded styles with a clear-first write,
+        // then ask Finder to reread each entry without closing its windows.
+        batchTask = Task { @MainActor in
+            var refreshed = 0
+            var failures: [Error] = []
+            applyProgress = (0, items.count)
+            for (index, item) in items.enumerated() {
+                if Task.isCancelled { break }
+                if let style = BackupStore.appliedStyle(for: item.url) {
+                    do {
+                        try IconApplier.apply(style, to: item.url)
+                        refreshed += 1
+                    } catch { failures.append(error) }
+                }
+                IconApplier.notifyFinder(of: item.url)
+                applyProgress = (index + 1, items.count)
+                await Task.yield()
+            }
+            applyProgress = nil
+            batchTask = nil
+            refreshBadges()
+            toast = failures.isEmpty
+                ? Toast(kind: .success, message: refreshed == 0
+                        ? "Finder refresh requested" : "Refreshed \(refreshed) icon\(refreshed == 1 ? "" : "s")")
+                : Toast(kind: .failure, message: "\(failures.count) icons couldn't be refreshed",
+                        detail: failures.first?.localizedDescription)
+        }
+    }
 
+    /// Explicit fallback when Finder continues to display an old cached image after a
+    /// targeted refresh. This closes and reopens Finder's windows, so it is never automatic.
+    func restartFinder() {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
         process.arguments = ["Finder"]
@@ -344,10 +400,10 @@ final class AppState {
             try process.run()
             process.waitUntilExit()
             toast = process.terminationStatus == 0
-                ? Toast(kind: .success, message: "Finder refreshed")
-                : Toast(kind: .failure, message: "Couldn't refresh Finder")
+                ? Toast(kind: .success, message: "Finder restarted")
+                : Toast(kind: .failure, message: "Couldn't restart Finder")
         } catch {
-            toast = Toast(kind: .failure, message: "Couldn't refresh Finder",
+            toast = Toast(kind: .failure, message: "Couldn't restart Finder",
                           detail: error.localizedDescription)
         }
     }
@@ -568,22 +624,52 @@ final class AppState {
     }
 
     /// Apply explicit mapped suggestions: a list of (folderURL, style) pairs.
-    func applyMappedSuggestions(_ pairs: [(URL, FolderStyle)]) async {
-        guard !pairs.isEmpty else { return }
-        guard batchTask == nil else { return }
+    func applyMappedSuggestions(_ pairs: [(URL, FolderStyle)],
+                                batchName: String = "Smart Style",
+                                themeAssignment: WorkspaceThemeAssignment? = nil) async {
+        await applyMappedStyles(pairs.map { ($0.0, Optional($0.1)) },
+                                batchName: batchName, themeAssignment: themeAssignment)
+    }
 
+    private func applyMappedStyles(_ pairs: [(URL, FolderStyle?)],
+                                   batchName: String,
+                                   themeAssignment: WorkspaceThemeAssignment? = nil,
+                                   clearThemeAssignmentRoot: URL? = nil) async {
+        guard batchTask == nil else { return }
+        let changedPairs = pairs.filter { url, target in
+            WorkspaceStyleChange.needsWrite(target: target,
+                                            current: BackupStore.appliedStyle(for: url),
+                                            hasCustomIcon: IconApplier.hasCustomIcon(url))
+        }
+        guard !changedPairs.isEmpty else {
+            if let themeAssignment {
+                themes.assign(themeID: themeAssignment.themeID,
+                              root: URL(fileURLWithPath: themeAssignment.rootPath),
+                              depth: themeAssignment.depth,
+                              includeRoot: themeAssignment.includeRoot)
+            }
+            if let clearThemeAssignmentRoot {
+                themes.forgetAssignment(for: clearThemeAssignmentRoot)
+            }
+            toast = Toast(kind: .info, message: "Already showing \(batchName)")
+            return
+        }
         var previous: [URL: FolderStyle?] = [:]
-        for pair in pairs { previous[pair.0] = BackupStore.appliedStyle(for: pair.0) }
-        applyProgress = (0, pairs.count)
+        for pair in changedPairs { previous[pair.0] = BackupStore.appliedStyle(for: pair.0) }
+        applyProgress = (0, changedPairs.count)
 
         batchTask = Task { @MainActor in
             var outcomes: [IconApplier.Outcome] = []
             var cancelled = false
 
-            for (index, pair) in pairs.enumerated() {
+            for (index, pair) in changedPairs.enumerated() {
                 if Task.isCancelled { cancelled = true; break }
                 do {
-                    try IconApplier.apply(pair.1, to: pair.0)
+                    if let style = pair.1 {
+                        try IconApplier.apply(style, to: pair.0)
+                    } else {
+                        try IconApplier.reset(pair.0)
+                    }
                     outcomes.append(IconApplier.Outcome(url: pair.0, error: nil))
                 } catch {
                     outcomes.append(IconApplier.Outcome(url: pair.0, error: error))
@@ -597,19 +683,28 @@ final class AppState {
             refreshBadges()
             lastApply = AppliedSnapshot(urls: outcomes.filter(\.succeeded).map(\.url),
                                         previous: previous,
-                                        styleName: "Smart Style")
+                                        styleName: batchName)
 
             let failed = outcomes.filter { !$0.succeeded }
             if cancelled {
                 toast = Toast(kind: .info,
-                              message: "Stopped after \(outcomes.count) of \(pairs.count)")
+                              message: "Stopped after \(outcomes.count) of \(changedPairs.count)")
             } else if failed.isEmpty {
+                if let themeAssignment {
+                    themes.assign(themeID: themeAssignment.themeID,
+                                  root: URL(fileURLWithPath: themeAssignment.rootPath),
+                                  depth: themeAssignment.depth,
+                                  includeRoot: themeAssignment.includeRoot)
+                }
+                if let clearThemeAssignmentRoot {
+                    themes.forgetAssignment(for: clearThemeAssignmentRoot)
+                }
                 toast = Toast(kind: .success,
-                              message: "Applied mapped presets to \(pairs.count) folders")
+                              message: "Applied \(batchName) to \(changedPairs.count) folders")
                 recordSuccessfulStyleApplication()
             } else {
                 toast = Toast(kind: .failure,
-                              message: "\(failed.count) of \(pairs.count) failed",
+                              message: "\(failed.count) of \(changedPairs.count) failed",
                               detail: failed.first?.error?.localizedDescription)
             }
         }
@@ -635,6 +730,12 @@ final class AppState {
         NSWorkspace.shared.open(EngagementTracker.repositoryURL)
     }
 
+#if APP_STORE
+    func openAppStoreReview() {
+        NSWorkspace.shared.open(EngagementTracker.appStoreReviewURL)
+    }
+#endif
+
     func snoozeGitHubStarPrompt() {
         engagementTracker.snoozePrompt()
         showingGitHubStarPrompt = false
@@ -655,6 +756,112 @@ final class AppState {
         }
         addFolders(preview.scannedURLs)
         Task { await applyMappedSuggestions(preview.matches.map { ($0.url, $0.style) }) }
+    }
+
+    func applyWorkspaceTheme(_ pairs: [(URL, FolderStyle)], theme: WorkspaceTheme,
+                             root: URL, depth: Int, includeRoot: Bool) {
+        guard !pairs.isEmpty else { return }
+        addFolders(pairs.map(\.0))
+        let assignment = WorkspaceThemeAssignment(rootPath: root.standardizedFileURL.path,
+                                                  themeID: theme.id, depth: depth,
+                                                  includeRoot: includeRoot)
+        Task { await applyMappedSuggestions(pairs, batchName: theme.name,
+                                            themeAssignment: assignment) }
+    }
+
+    func applyWorkspaceLook(_ look: WorkspaceLook, to root: URL) {
+        let pairs = look.pairs(in: root)
+        guard !pairs.isEmpty else { return }
+        addFolders(pairs.map(\.0))
+        Task { await applyMappedStyles(pairs, batchName: look.name,
+                                       clearThemeAssignmentRoot: root) }
+    }
+
+    // MARK: - Portable setup
+
+    func exportCompleteSetup() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "FolderForge Setup.folderforge-setup.json"
+        panel.message = "Save presets, themes, rules, workspace assignments, applied styles, and original icon backups locally."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        let applied = BackupStore.allApplied().map { record in
+            SetupArchive.AppliedFolder(path: record.path, style: record.style,
+                                       originalIconData: BackupStore.originalIconData(
+                                        for: URL(fileURLWithPath: record.path)))
+        }
+        let archive = SetupArchive(sourceHome: NSHomeDirectory(),
+                                   presets: presets.userPresets,
+                                   themes: themes.customThemes,
+                                   themeAssignments: themes.assignments,
+                                   looks: themes.looks,
+                                   ruleSets: smartRules.ruleSets,
+                                   activeRuleSetID: smartRules.activeRuleSetID,
+                                   watches: smartRules.watches,
+                                   appliedFolders: applied)
+        do {
+            try JSONEncoder.forgeEncoder.encode(archive).write(to: url, options: .atomic)
+            toast = Toast(kind: .success, message: "Setup exported",
+                          detail: "\(applied.count) folder styles saved")
+        } catch {
+            toast = Toast(kind: .failure, message: "Couldn't export setup",
+                          detail: error.localizedDescription)
+        }
+    }
+
+    func chooseSetupToImport() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a FolderForge setup JSON file"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let archive = try JSONDecoder.forgeDecoder.decode(SetupArchive.self,
+                                                               from: Data(contentsOf: url))
+            guard archive.version == 1 else {
+                toast = Toast(kind: .failure, message: "Unsupported setup version")
+                return
+            }
+            pendingSetupImport = archive
+        } catch {
+            toast = Toast(kind: .failure, message: "Couldn't read setup",
+                          detail: error.localizedDescription)
+        }
+    }
+
+    func importCompleteSetup(_ archive: SetupArchive, reapply: Bool) {
+        for preset in archive.presets { presets.add(preset, named: preset.name) }
+        let ruleSetIDs = smartRules.importSetupRuleSets(archive.ruleSets)
+        smartRules.activateImportedRuleSet(archive.activeRuleSetID, mappedIDs: ruleSetIDs)
+        smartRules.importSetupWatches(archive.watches ?? [], ruleSetIDs: ruleSetIDs,
+                                     sourceHome: archive.sourceHome)
+        _ = themes.importSetupThemes(archive.themes,
+                                     assignments: archive.themeAssignments,
+                                     sourceHome: archive.sourceHome)
+        themes.importSetupLooks(archive.looks ?? [], sourceHome: archive.sourceHome)
+        pendingSetupImport = nil
+
+        guard reapply else {
+            toast = Toast(kind: .success, message: "Setup imported",
+                          detail: "Presets, themes, rules, and workspace assignments are ready")
+            return
+        }
+        let matched = archive.matchingFolders()
+        for (url, entry) in matched {
+            if let original = entry.originalIconData {
+                BackupStore.installMigratedOriginalIfNeeded(original, for: url)
+            }
+        }
+        addFolders(matched.map(\.0))
+        Task {
+            await applyMappedSuggestions(matched.map { ($0.0, $0.1.style) },
+                                         batchName: "imported setup")
+        }
+        if matched.isEmpty {
+            toast = Toast(kind: .info, message: "Setup imported",
+                          detail: "No matching folders found yet; presets and rules are available")
+        }
     }
 
     /// Starts opt-in FSEvents roots after the app has finished creating its UI. A watch only

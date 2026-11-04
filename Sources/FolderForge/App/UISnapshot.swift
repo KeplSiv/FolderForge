@@ -12,6 +12,10 @@ enum UISnapshot {
         case main
         case sheet
         case smart
+        case themes
+        case themesPalette
+        case themeEditor
+        case setupImport
     }
 
     static func capture(target: Target,
@@ -24,7 +28,8 @@ enum UISnapshot {
                         overlayKind: OverlayKind? = nil,
                         styleOverride: FolderStyle? = nil,
                         iconURL: URL? = nil,
-                        sheetPath: String = "") -> Bool {
+                        sheetPath: String = "",
+                        demo: Bool = false) -> Bool {
         // Accessory, not regular: no Dock icon, no focus stealing. The window still gets a
         // real window-server backing store, which is what we capture from.
         let app = NSApplication.shared
@@ -32,6 +37,34 @@ enum UISnapshot {
 
         let state = AppState()
         seed(state, folders: folders, selectIndex: selectIndex)
+        var demoStoreURL: URL?
+        var demoRulesDirectory: URL?
+        if demo, let demoRoot = folders.first {
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("folderforge-demo-themes-\(UUID().uuidString).json")
+            demoStoreURL = url
+            state.themes = WorkspaceThemeStore(storeURL: url)
+            let rulesDirectory = FileManager.default.temporaryDirectory
+                .appendingPathComponent("folderforge-demo-rules-\(UUID().uuidString)")
+            try? FileManager.default.createDirectory(at: rulesDirectory,
+                                                     withIntermediateDirectories: true)
+            demoRulesDirectory = rulesDirectory
+            state.smartRules = SmartRuleStore(storageDirectory: rulesDirectory)
+            var options = FolderScanner.Options()
+            options.depth = 1
+            let scanned = FolderScanner.scan(root: demoRoot, options: options).folders
+                .filter { $0.standardizedFileURL != demoRoot.standardizedFileURL }
+            let pairs: [(URL, FolderStyle?)] = scanned.enumerated().map { index, folder in
+                (folder, index == scanned.count - 1 ? nil :
+                    WorkspaceThemeEngine.style(for: folder, theme: WorkspaceTheme.all[1],
+                                               existing: nil))
+            }
+            state.themes.saveLook(WorkspaceLook(name: "Studio Set", root: demoRoot, pairs: pairs))
+        }
+        defer {
+            if let demoStoreURL { try? FileManager.default.removeItem(at: demoStoreURL) }
+            if let demoRulesDirectory { try? FileManager.default.removeItem(at: demoRulesDirectory) }
+        }
         if let styleOverride { state.style = styleOverride }
         if let inspectorTab { state.inspectorTab = inspectorTab }
         if let overlayKind { state.style.overlay.kind = overlayKind }
@@ -46,6 +79,35 @@ enum UISnapshot {
         case .main: AnyView(ContentView(state: state))
         case .sheet: AnyView(AddFoldersSheet(state: state, initialPath: sheetPath))
         case .smart: AnyView(SmartStyleSheet(state: state, initialPath: sheetPath))
+        case .themes: AnyView(WorkspaceThemesSheet(
+            state: state, initialRootPath: demo ? folders.first?.path : nil
+        ))
+        case .themesPalette: AnyView(WorkspaceThemesSheet(
+            state: state, initialThemeID: "orchid",
+            initialRootPath: demo ? folders.first?.path : nil
+        ))
+        case .themeEditor: AnyView(WorkspaceThemeEditor(
+            theme: WorkspaceTheme(id: "snapshot-theme", name: "My Coastal Theme",
+                                  colors: WorkspaceTheme.all[0].colors, sourceURL: nil),
+            onSave: { _ in }
+        ))
+        case .setupImport:
+            AnyView(SetupImportSheet(state: state, archive: SetupArchive(
+                sourceHome: NSHomeDirectory(),
+                presets: Array(BuiltInPresets.all.prefix(4)),
+                themes: [WorkspaceTheme.all[0]],
+                themeAssignments: [],
+                ruleSets: [],
+                activeRuleSetID: nil,
+                watches: [],
+                appliedFolders: state.folders.prefix(3).map {
+                    SetupArchive.AppliedFolder(path: $0.url.path,
+                                               style: WorkspaceThemeEngine.style(
+                                                for: $0.url, theme: WorkspaceTheme.all[0],
+                                                existing: nil),
+                                               originalIconData: nil)
+                }
+            )))
         }
 
         let hosting = NSHostingView(rootView: root)

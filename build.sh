@@ -22,15 +22,15 @@ cd "$(dirname "$0")"
 
 APP_NAME="FolderForge"
 BUNDLE_ID="com.folderforge.app"
-VERSION="1.1.2"
-BUILD="14"
+VERSION="1.2.0"
+BUILD="15"
 
 DIST="dist"
 APP="$DIST/$APP_NAME.app"
 CONTENTS="$APP/Contents"
 MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
-DMG="$DIST/$APP_NAME.dmg"
+DMG="$DIST/$APP_NAME-$VERSION.dmg"
 ENTITLEMENTS="Resources/$APP_NAME.entitlements"
 
 NOTARY_PROFILE="${NOTARY_PROFILE:-notarytool-profile}"

@@ -58,6 +58,8 @@ struct FolderForgeApp: App {
         CommandMenu("Folder") {
             Button("Smart Style…") { state.showingSmartStyle = true }
                 .keyboardShortcut("s", modifiers: [.command, .option])
+            Button("Refresh and Repair Icons") { state.refreshFinder() }
+            Button("Restart Finder") { state.restartFinder() }
             Divider()
             Button("Apply Icon") { state.apply() }
                 .keyboardShortcut(.return, modifiers: .command)
@@ -92,6 +94,9 @@ struct FolderForgeApp: App {
             Divider()
             Button("Export Style…") { state.exportStyleFile() }
             Button("Import Style…") { state.importStyleFile() }
+            Divider()
+            Button("Export Complete Setup…") { state.exportCompleteSetup() }
+            Button("Import Complete Setup…") { state.chooseSetupToImport() }
         }
 
         CommandGroup(replacing: .help) {
@@ -387,6 +392,25 @@ struct SettingsView: View {
             }
 
             Section {
+#if APP_STORE
+                HStack(spacing: 12) {
+                    Image(systemName: "text.bubble.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Color.accentColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Share your experience")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Write a review on the Mac App Store.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Write a Review") {
+                        state.openAppStoreReview()
+                    }
+                }
+#endif
+
                 HStack(spacing: 12) {
                     Image(systemName: "star.circle.fill")
                         .font(.system(size: 22))

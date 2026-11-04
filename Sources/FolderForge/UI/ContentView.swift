@@ -49,6 +49,12 @@ struct ContentView: View {
         .sheet(isPresented: $state.showingSmartStyle) {
             SmartStyleSheet(state: state)
         }
+        .sheet(isPresented: $state.showingWorkspaceThemes) {
+            WorkspaceThemesSheet(state: state)
+        }
+        .sheet(item: $state.pendingSetupImport) { archive in
+            SetupImportSheet(state: state, archive: archive)
+        }
         .confirmationDialog(
             "\(confirming?.verb ?? "") all \(state.folders.count) folders?",
             isPresented: Binding(get: { confirming != nil },
@@ -65,7 +71,7 @@ struct ContentView: View {
                  ? "Nothing is selected, so this writes the current design to every folder in the list."
                  : "Nothing is selected, so this restores the original icon on every folder in the list.")
         }
-        .frame(minWidth: 720, minHeight: 480)
+        .frame(minWidth: 900, minHeight: 520)
         .onReceive(NotificationCenter.default.publisher(for: .folderForgeOpenURLs)) { notification in
             let pending = AppDelegate.drainPendingOpenURLs()
             let urls = pending.isEmpty ? (notification.object as? [URL] ?? []) : pending
@@ -116,7 +122,16 @@ struct ContentView: View {
             Button { state.refreshFinder() } label: {
                 Text("Refresh Finder")
             }
-            .help("Refresh Finder if macOS is still showing cached folder icons")
+            .help("Refresh selected folder icons and repair any that disappeared during sync")
+        }
+
+        ToolbarItem {
+            Button { state.showingWorkspaceThemes = true } label: {
+                Label("Themes", systemImage: "paintpalette.fill")
+                    .labelStyle(.titleAndIcon)
+            }
+            .buttonStyle(.bordered)
+            .help("Preview and switch a palette across a workspace folder tree")
         }
 
         ToolbarItem {
@@ -135,6 +150,9 @@ struct ContentView: View {
                 Divider()
                 Button("Export Style File…") { state.exportStyleFile() }
                 Button("Import Style File…") { state.importStyleFile() }
+                Divider()
+                Button("Export Complete Setup…") { state.exportCompleteSetup() }
+                Button("Import Complete Setup…") { state.chooseSetupToImport() }
             } label: {
                 Label("Export", systemImage: "square.and.arrow.up")
             }

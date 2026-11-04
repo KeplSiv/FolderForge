@@ -636,6 +636,53 @@ final class SmartRuleStore {
         return imported.count
     }
 
+    /// Merge exported user rule sets while linking their inherited starter rules to the
+    /// destination Mac's built-in starter set. Watches are intentionally not auto-enabled.
+    @discardableResult
+    func importSetupRuleSets(_ incoming: [SmartRuleSet]) -> [UUID: UUID] {
+        let sourceStarterID = incoming.first {
+            $0.name == "Everyday folders" && $0.rules.contains(where: \.isBuiltIn)
+        }?.id
+        let custom = incoming.filter { $0.id != sourceStarterID }
+        var mappedIDs: [UUID: UUID] = [:]
+        if let sourceStarterID, let starterRuleSetID {
+            mappedIDs[sourceStarterID] = starterRuleSetID
+        }
+        for set in custom { mappedIDs[set.id] = UUID() }
+        for var set in custom {
+            let oldID = set.id
+            set.id = mappedIDs[oldID] ?? UUID()
+            set.name = uniqueName(set.name)
+            set.parentRuleSetID = set.parentRuleSetID.flatMap { mappedIDs[$0] }
+            ruleSets.append(set)
+        }
+        if !custom.isEmpty { saveRules() }
+        return mappedIDs
+    }
+
+    func importSetupWatches(_ incoming: [SmartRuleWatch], ruleSetIDs: [UUID: UUID],
+                            sourceHome: String, destinationHome: String = NSHomeDirectory()) {
+        for watch in incoming {
+            guard let ruleSetID = ruleSetIDs[watch.ruleSetID] else { continue }
+            var copy = watch
+            copy.id = UUID()
+            copy.rootPath = SetupArchive.mappedPath(watch.rootPath, sourceHome: sourceHome,
+                                                    destinationHome: destinationHome)
+            copy.ruleSetID = ruleSetID
+            copy.isEnabled = false
+            watches.removeAll { $0.rootPath == copy.rootPath }
+            watches.append(copy)
+        }
+        saveWatches()
+        restartWatches()
+    }
+
+    func activateImportedRuleSet(_ originalID: UUID?, mappedIDs: [UUID: UUID]) {
+        guard let originalID, let mapped = mappedIDs[originalID],
+              ruleSets.contains(where: { $0.id == mapped }) else { return }
+        activeRuleSetID = mapped
+    }
+
     // MARK: Watches
 
     func watch(for root: URL) -> SmartRuleWatch? {

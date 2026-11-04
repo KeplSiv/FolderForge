@@ -99,6 +99,22 @@ enum BackupStore {
         backupsDirectory.appendingPathComponent(key(for: folder) + ".none")
     }
 
+    /// Included in a user-exported setup so an original custom icon remains recoverable
+    /// after moving to another Mac. The export never modifies the source folder.
+    static func originalIconData(for folder: URL) -> Data? {
+        try? Data(contentsOf: backupURL(for: folder))
+    }
+
+    /// Install a migrated original only when this Mac has no existing backup or custom icon.
+    /// A target Mac's own artwork always takes precedence.
+    static func installMigratedOriginalIfNeeded(_ data: Data, for folder: URL) {
+        guard !FileManager.default.fileExists(atPath: backupURL(for: folder).path),
+              !FileManager.default.fileExists(atPath: sentinelURL(for: folder).path),
+              !IconApplier.hasCustomIcon(folder),
+              NSImage(data: data) != nil else { return }
+        try? data.write(to: backupURL(for: folder), options: .atomic)
+    }
+
     /// Snapshots the folder's pre-existing custom icon exactly once, so the very first apply is
     /// always reversible. Subsequent applies leave the snapshot untouched.
     ///

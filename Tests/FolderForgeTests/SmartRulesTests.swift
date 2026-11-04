@@ -253,11 +253,37 @@ final class EngagementTrackerTests: XCTestCase {
         XCTAssertFalse(tracker.shouldShowGitHubStarPrompt())
     }
 
-    func testAppStoreReviewIsRequestedOnlyAfterSecondSuccessfulApplication() {
-        let tracker = EngagementTracker(defaults: defaults)
+    func testAppStoreReviewStartsAfterThirdSuccessfulApplication() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        let tracker = EngagementTracker(defaults: defaults, now: { start })
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
         XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
         XCTAssertTrue(tracker.recordSuccessfulApplicationForAppStoreReview())
+    }
+
+    func testAppStoreReviewWaitsNinetyDaysBeforeBecomingEligibleAgain() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        var tracker = EngagementTracker(defaults: defaults, now: { start })
         XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+        XCTAssertTrue(tracker.recordSuccessfulApplicationForAppStoreReview())
+
+        tracker.now = { start.addingTimeInterval(89 * 24 * 60 * 60) }
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+
+        tracker.now = { start.addingTimeInterval(90 * 24 * 60 * 60) }
+        XCTAssertTrue(tracker.recordSuccessfulApplicationForAppStoreReview())
+    }
+
+    func testLegacyOneTimeReviewPromptMigratesWithoutPromptingAgainImmediately() {
+        let start = Date(timeIntervalSince1970: 1_700_000_000)
+        defaults.set(3, forKey: "engagement.appStoreSuccessfulApplications")
+        defaults.set(true, forKey: "engagement.appStoreReviewRequestedAfterSecondStyle")
+        var tracker = EngagementTracker(defaults: defaults, now: { start })
+
+        XCTAssertFalse(tracker.recordSuccessfulApplicationForAppStoreReview())
+        tracker.now = { start.addingTimeInterval(90 * 24 * 60 * 60) }
+        XCTAssertTrue(tracker.recordSuccessfulApplicationForAppStoreReview())
     }
 }
 

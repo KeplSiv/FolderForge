@@ -6,7 +6,7 @@
 
 Open-source macOS folder customization with presets, rules, and recursive workspace styling.
 
-[Website & Docs](https://folder-forge.vercel.app/) · [Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12) · [Download notarized v1.1.2](https://github.com/KeplSiv/FolderForge/releases/download/v1.1.2/FolderForge-1.1.2.dmg) · macOS 14+
+[Website & Docs](https://folder-forge.vercel.app/) · [Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12) · [Download notarized v1.2.0](https://github.com/KeplSiv/FolderForge/releases/download/v1.2.0/FolderForge-1.2.0.dmg) · macOS 14+
 
 <sub>⭐ If you enjoy FolderForge, consider giving it a star.</sub>
 
@@ -25,7 +25,10 @@ Open-source macOS folder customization with presets, rules, and recursive worksp
 - Reusable presets and recursive folder imports
 - Visual Finder style chooser with My Styles and built-in presets
 - Smart Style rules for applying designs across a folder tree
+- Workspace themes with Coolors palettes, custom themes, and saved looks
 - Restore original icons and undo the last batch
+- Complete setup export and import for moving to another Mac
+- Small-size icon legibility checks and Finder refresh
 - Native SwiftUI app with no third-party dependencies
 
 ![FolderForge editor](screenshots/main-window.png)
@@ -43,11 +46,23 @@ Smart Style matches folders by name, path, marker files, or file types. For exam
 
 ![Smart Style preview](screenshots/smart-style.png)
 
+## Workspace Themes
+
+Open **Themes** to preview a palette across a workspace. Choose a built-in Coolors palette, paste a Coolors URL, or make your own theme. **Save Current…** keeps the exact folder styles and untouched folders; **Quick Switch** restores a saved look or applies another theme. Workspace scans skip symlinked folders.
+
+![Workspace theme preview in a disposable test workspace](screenshots/workspace-themes.png)
+
+## Move to another Mac
+
+Use **Export Complete Setup…** to save styles, themes, saved looks, rules, workspace assignments, and original icon backups to a local JSON file. **Import Complete Setup…** previews matching folders and lets you choose whether to reapply their styles. Imported Smart Style watches stay paused.
+
+If Finder shows an old icon, use **Refresh Finder**. The editor also warns when an overlay may be hard to see at normal Finder sizes.
+
 ## Install
 
 Install FolderForge from the [Mac App Store](https://apps.apple.com/in/app/folderforge/id6799417746?mt=12), or download the DMG from [Releases](https://github.com/KeplSiv/FolderForge/releases/latest), move FolderForge to Applications, then open it.
 
-FolderForge 1.1.2 is signed with a Developer ID certificate and notarized by Apple.
+FolderForge 1.2.0 is signed with a Developer ID certificate and notarized by Apple.
 
 To build it yourself:
 

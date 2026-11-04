@@ -25,6 +25,8 @@ enum CLI {
             return apply(args)
         case "--reset":
             return reset(args)
+        case "--refresh-applied":
+            return refreshApplied(args)
         case "--iconset":
             return iconset(args)
         case "--ui-snapshot":
@@ -154,6 +156,39 @@ enum CLI {
     }
 
     // MARK: - Commands
+
+    /// Reassert recorded icons after Finder has kept an older custom image in cache.
+    /// Scoped to a caller-supplied root so it never sweeps every styled folder on the Mac.
+    private static func refreshApplied(_ args: [String]) -> Int32 {
+        let options = parse(args)
+        guard let rawRoot = options.positional.first,
+              let root = FolderScanner.resolve(path: rawRoot) else {
+            FileHandle.standardError.write(Data("--refresh-applied needs a workspace folder\n".utf8))
+            return 1
+        }
+        let rootPath = root.standardizedFileURL.path
+        let records = BackupStore.allApplied().filter {
+            $0.path == rootPath || $0.path.hasPrefix(rootPath + "/")
+        }
+        if options["dry-run"] != nil {
+            print("Would refresh \(records.count) recorded icons under \(rootPath)")
+            return 0
+        }
+        var refreshed = 0
+        var failed = 0
+        for record in records {
+            do {
+                try IconApplier.apply(record.style, to: URL(fileURLWithPath: record.path))
+                refreshed += 1
+            } catch {
+                failed += 1
+                FileHandle.standardError.write(Data("Couldn't refresh \(record.path): \(error)\n".utf8))
+            }
+        }
+        print("Refreshed \(refreshed) icons under \(rootPath)" +
+              (failed == 0 ? "" : " (\(failed) failed)"))
+        return failed == 0 ? 0 : 1
+    }
 
     private static func export(_ args: [String]) -> Int32 {
         let options = parse(args)
@@ -406,7 +441,8 @@ enum CLI {
             overlayKind: options["overlay"].flatMap(OverlayKind.init(rawValue:)),
             styleOverride: styleOverride,
             iconURL: options["icon"].map { URL(fileURLWithPath: $0) },
-            sheetPath: options["path"] ?? ""
+            sheetPath: options["path"] ?? "",
+            demo: options["demo"] != nil
         )
         if ok { print("Wrote \(out)") }
         return ok ? 0 : 1
@@ -497,6 +533,7 @@ enum CLI {
           --iconset <out.iconset> [style options]
           --apply <folder...> [style options] [scan options]
           --reset <folder...> [scan options]
+          --refresh-applied <workspace> [--dry-run]
           --list-presets
 
         SCAN OPTIONS (apply to --apply and --reset)
